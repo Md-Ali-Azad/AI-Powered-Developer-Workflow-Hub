@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.name }} - AI Workflow Hub{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>{{ project.name }}</h2>
+        <p class="text-muted">{{ project.description }}</p>
+        <small class="text-muted">Team: {{ project.team.name }} • Created {{ project.created_at|date:"M d, Y" }}</small>
+    </div>
+    <div>
+        <a href="{% url 'pr_create' project.id %}" class="btn btn-primary">
+            <i class="fas fa-code-branch"></i> New Pull Request
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Pull Requests -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6><i class="fas fa-code-branch"></i> Pull Requests</h6>
+                <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="pr-filter" id="pr-all" checked>
+                    <label class="btn btn-outline-primary" for="pr-all">All</label>
+                    
+                    <input type="radio" class="btn-check" name="pr-filter" id="pr-open">
+                    <label class="btn btn-outline-primary" for="pr-open">Open</label>
+                    
+                    <input type="radio" class="btn-check" name="pr-filter" id="pr-merged">
+                    <label class="btn btn-outline-primary" for="pr-merged">Merged</label>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if pull_requests %}
+                    {% for pr in pull_requests %}
+                    <div class="border-bottom py-3 pr-item" data-status="{{ pr.status }}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    <a href="{% url 'pr_detail' pr.id %}" class="text-decoration-none">
+                                        #{{ pr.number }} {{ pr.title }}
+                                    </a>
+                                    {% if pr.risk_flags %}
+                                        <span class="risk-flag risk-medium ms-2">
+                                            <i class="fas fa-exclamation-triangle"></i> Risk Detected
+                                        </span>
+                                    {% endif %}
+                                </h6>
+                                <p class="text-muted small mb-2">{{ pr.description|truncatewords:20 }}</p>
+                                {% if pr.ai_summary %}
+                                    <div class="alert alert-info small py-2">
+                                        <i class="fas fa-robot"></i> <strong>AI Summary:</strong> {{ pr.ai_summary|truncatewords:25 }}
+                                    </div>
+                                {% endif %}
+                                <small class="text-muted">
+                                    by {{ pr.author }} • {{ pr.created_at|timesince }} ago
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-{% if pr.status == 'open' %}warning{% elif pr.status == 'merged' %}success{% else %}secondary{% endif %}">
+                                    {{ pr.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-code-branch fa-3x text-muted mb-3"></i>
+                        <h6>No pull requests yet</h6>
+                        <p class="text-muted">Create your first pull request to get started!</p>
+                        <a href="{% url 'pr_create' project.id %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Pull Request
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Changelog -->
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-list-alt"></i> Changelog</h6>
+            </div>
+            <div class="card-body">
+                {% if changelog_entries %}
+                    {% for entry in changelog_entries %}
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="flex-shrink-0">
+                            <span class="badge bg-{% if entry.category == 'feature' %}primary{% elif entry.category == 'fix' %}success{% elif entry.category == 'breaking' %}danger{% else %}secondary{% endif %}">
+                                {{ entry.get_category_display }}
+                            </span>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-1">{{ entry.title }}</h6>
+                            <p class="text-muted small mb-1">{{ entry.body|truncatewords:30 }}</p>
+                            <small class="text-muted">{{ entry.created_at|date:"M d, Y" }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No changelog entries yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Project Stats -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-chart-bar"></i> Project Stats</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ stats.total_prs }}</h4>
+                        <small>Total PRs</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ stats.open_prs }}</h4>
+                        <small>Open PRs</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-success">{{ stats.merged_prs }}</h4>
+                        <small>Merged</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-danger">{{ stats.risky_prs }}</h4>
+                        <small>Risky PRs</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Members -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-users"></i> Team Members</h6>
+            </div>
+            <div class="card-body">
+                {% for member in team_members %}
+                <div class="d-flex align-items-center mb-2">
+                    <div class="flex-grow-1">
+                        <strong>{{ member.user.get_full_name|default:member.user.username }}</strong>
+                        <br><small class="text-muted">{{ member.get_role_display }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- AI Insights -->
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-robot"></i> AI Insights</h6>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-outline-primary btn-sm w-100 mb-2" onclick="getAIInsights()">
+                    <i class="fas fa-magic"></i> Get Project Insights
+                </button>
+                <div id="ai-insights" class="mt-2"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Filter PRs
+document.querySelectorAll('input[name="pr-filter"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const filter = this.id.replace('pr-', '');
+        document.querySelectorAll('.pr-item').forEach(item => {
+            if (filter === 'all' || item.dataset.status === filter) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+});
+
+// AI Insights
+function getAIInsights() {
+    const button = document.querySelector('button[onclick="getAIInsights()"]');
+    const insights = document.getElementById('ai-insights');
+    
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+    button.disabled = true;
+    
+    fetch('/ai/task_suggest/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            name: '{{ project.name }}',
+            description: '{{ project.description }}',
+            current_tasks: [],
+            recent_activity: []
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        insights.innerHTML = `<div class="alert alert-info small">${data.suggestions || data.error}</div>`;
+        button.innerHTML = '<i class="fas fa-magic"></i> Get Project Insights';
+        button.disabled = false;
+    })
+    .catch(error => {
+        insights.innerHTML = '<div class="alert alert-danger small">Error getting insights</div>';
+        button.innerHTML = '<i class="fas fa-magic"></i> Get Project Insights';
+        button.disabled = false;
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - AI Workflow Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-user"></i> Profile Settings</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_first_name" class="form-label">First Name</label>
+                            <input type="text" class="form-control" name="first_name" id="id_first_name" 
+                                   value="{{ user.first_name }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_last_name" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" name="last_name" id="id_last_name" 
+                                   value="{{ user.last_name }}">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_email" class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" id="id_email" 
+                               value="{{ user.email }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">Username</label>
+                        <input type="text" class="form-control" name="username" id="id_username" 
+                               value="{{ user.username }}" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-chart-bar"></i> Your Stats</h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="row">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ user_stats.projects_count }}</h4>
+                        <small>Projects</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ user_stats.prs_count }}</h4>
+                        <small>PRs Created</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-6">
+                        <h4 class="text-info">{{ user_stats.teams_count }}</h4>
+                        <small>Teams</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ user_stats.notifications_count }}</h4>
+                        <small>Notifications</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

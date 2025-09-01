@@ -1,0 +1,18 @@
+hooks:
+  on_new_pr:
+    description: "When a new PR is detected, generate AI summary and notify reviewers"
+    input:
+      project_id: int
+      pr_number: int
+      diff_url: str
+    actions:
+      - python: core.hooks.handle_new_pr  # this function will be created/edited in core/hooks.py
+
+  on_merge:
+    description: "When a PR is merged, create a changelog entry and generate release notes"
+    input:
+      project_id: int
+      pr_number: int
+      commits: list
+    actions:
+      - python: core.hooks.handle_merge

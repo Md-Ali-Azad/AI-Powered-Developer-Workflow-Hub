@@ -1,0 +1,111 @@
+name: ai_workflow_hub
+target: django
+database: sqlite
+description: >
+  An AI-powered Developer Workflow Hub built with Django and SQLite.
+  It enables teams to manage projects and tasks, integrates with GitHub,
+  leverages Gemini API for AI assistance, provides notifications, and
+  automates documentation (like changelogs and release notes).
+
+features:
+  - User Authentication:
+      description: >
+        Users can sign up, log in, and manage sessions.
+        Teams can be created, and members can be assigned roles (Admin, Developer, Viewer).
+      models:
+        User:
+          fields:
+            - username: string, unique
+            - email: string, unique
+            - password: string
+        Team:
+          fields:
+            - name: string
+            - description: text
+            - created_at: datetime
+        Membership:
+          fields:
+            - user: FK(User)
+            - team: FK(Team)
+            - role: choice(Admin, Developer, Viewer)
+
+  - Project & Task Management:
+      description: >
+        Projects can be created within teams, with tasks assigned to team members.
+        Tasks have status and deadlines.
+      models:
+        Project:
+          fields:
+            - name: string
+            - description: text
+            - team: FK(Team)
+            - created_at: datetime
+        Task:
+          fields:
+            - title: string
+            - description: text
+            - project: FK(Project)
+            - assignee: FK(User)
+            - status: choice(Backlog, In Progress, Review, Done)
+            - due_date: date
+            - created_at: datetime
+
+  - GitHub Integration:
+      description: >
+        Connect GitHub repositories to projects.
+        Track Pull Requests, Commits, and Issues.
+      models:
+        Repository:
+          fields:
+            - name: string
+            - url: string
+            - project: FK(Project)
+        PullRequest:
+          fields:
+            - repo: FK(Repository)
+            - title: string
+            - description: text
+            - author: string
+            - status: choice(Open, Merged, Closed)
+            - created_at: datetime
+        Commit:
+          fields:
+            - repo: FK(Repository)
+            - hash: string
+            - message: text
+            - author: string
+            - created_at: datetime
+        Issue:
+          fields:
+            - repo: FK(Repository)
+            - title: string
+            - description: text
+            - status: choice(Open, In Progress, Closed)
+            - created_at: datetime
+
+  - AI Helper (Gemini API):
+      description: >
+        Integrate Gemini API for AI assistance. Features include PR summaries,
+        build log explanations, changelog generation, and task suggestions.
+      endpoints:
+        - /ai/pr_summary
+        - /ai/build_explain
+        - /ai/changelog
+        - /ai/task_suggest
+
+  - Notifications:
+      description: >
+        Users receive notifications when PRs are assigned, tasks are due,
+        builds fail, or new comments are added.
+      models:
+        Notification:
+          fields:
+            - user: FK(User)
+            - message: text
+            - read: boolean
+            - created_at: datetime
+
+  - Dashboard & Reports:
+      description: >
+        A project dashboard shows task progress, PRs, and AI-generated
+        health reports (e.g., overdue tasks, pending PRs, unresolved builds).

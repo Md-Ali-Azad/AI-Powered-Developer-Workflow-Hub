@@ -1,0 +1,346 @@
+{% extends 'base.html' %}
+
+{% block title %}PR #{{ pr.number }}: {{ pr.title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5>
+                        #{{ pr.number }} {{ pr.title }}
+                        <span class="badge bg-{% if pr.status == 'open' %}warning{% elif pr.status == 'merged' %}success{% else %}secondary{% endif %} ms-2">
+                            {{ pr.get_status_display }}
+                        </span>
+                    </h5>
+                    {% if pr.status == 'open' %}
+                    <button class="btn btn-success btn-sm" onclick="mergePR()">
+                        <i class="fas fa-code-branch"></i> Merge PR
+                    </button>
+                    {% endif %}
+                </div>
+                <small class="text-muted">
+                    by {{ pr.author }} • {{ pr.created_at|timesince }} ago • 
+                    <a href="{{ pr.diff_url }}" target="_blank">View on GitHub <i class="fas fa-external-link-alt"></i></a>
+                </small>
+            </div>
+            <div class="card-body">
+                <h6>Description</h6>
+                <p>{{ pr.description|linebreaks }}</p>
+                
+                {% if pr.ai_summary %}
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-robot"></i> AI Summary</h6>
+                    <div class="mb-0" id="ai-summary-content">{{ pr.ai_summary|linebreaks }}</div>
+                </div>
+                {% else %}
+                <div class="alert alert-light">
+                    <button class="btn btn-outline-primary btn-sm" onclick="generateAISummary()">
+                        <i class="fas fa-robot"></i> Generate AI Summary
+                    </button>
+                </div>
+                {% endif %}
+                
+                {% if pr.risk_flags %}
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Risk Analysis</h6>
+                    <p class="mb-2">The following risks were detected:</p>
+                    <ul class="mb-0">
+                        {% for risk in pr.risk_flags.detected_risks %}
+                        <li><span class="badge bg-warning text-dark">{{ risk|title }}</span></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Comments Section -->
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-comments"></i> Comments ({{ comments.count }})</h6>
+            </div>
+            <div class="card-body">
+                <div id="comments-list">
+                    {% if comments %}
+                        {% for comment in comments %}
+                        <div class="comment mb-3 pb-3 border-bottom">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle me-2">
+                                        {{ comment.author.username|first|upper }}
+                                    </div>
+                                    <div>
+                                        <strong>{{ comment.author.get_full_name|default:comment.author.username }}</strong>
+                                        <small class="text-muted ms-2">{{ comment.created_at|timesince }} ago</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2 ms-4">
+                                <div class="comment-content">{{ comment.body|linebreaks }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No comments yet. Be the first to comment!</p>
+                    {% endif %}
+                </div>
+                
+                <hr>
+                
+                <form id="comment-form" onsubmit="addComment(event)">
+                    <div class="mb-3">
+                        <textarea class="form-control" placeholder="Add a comment..." rows="3" id="comment-text" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-comment"></i> Add Comment
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- PR Info -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-info-circle"></i> Pull Request Info</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>Project:</strong> 
+                    <a href="{% url 'project_detail' pr.project.id %}">{{ pr.project.name }}</a>
+                </div>
+                <div class="mb-2">
+                    <strong>Author:</strong> {{ pr.author }}
+                </div>
+                <div class="mb-2">
+                    <strong>Status:</strong> 
+                    <span class="badge bg-{% if pr.status == 'open' %}warning{% elif pr.status == 'merged' %}success{% else %}secondary{% endif %}">
+                        {{ pr.get_status_display }}
+                    </span>
+                </div>
+                <div class="mb-2">
+                    <strong>Created:</strong> {{ pr.created_at|date:"M d, Y H:i" }}
+                </div>
+                {% if pr.risk_flags %}
+                <div class="mb-2">
+                    <strong>Risk Level:</strong> 
+                    <span class="badge bg-warning">{{ pr.risk_flags.confidence|title }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- AI Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-robot"></i> AI Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="generateAISummary()">
+                        <i class="fas fa-magic"></i> Regenerate Summary
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="suggestReviewers()">
+                        <i class="fas fa-users"></i> Suggest Reviewers
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="estimateReviewTime()">
+                        <i class="fas fa-clock"></i> Estimate Review Time
+                    </button>
+                </div>
+                <div id="ai-actions-result" class="mt-3"></div>
+            </div>
+        </div>
+
+        <!-- Related PRs -->
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-link"></i> Related PRs</h6>
+            </div>
+            <div class="card-body">
+                {% if related_prs %}
+                    {% for related_pr in related_prs %}
+                    <div class="mb-2">
+                        <a href="{% url 'pr_detail' related_pr.id %}" class="text-decoration-none">
+                            #{{ related_pr.number }} {{ related_pr.title|truncatechars:30 }}
+                        </a>
+                        <br><small class="text-muted">{{ related_pr.created_at|timesince }} ago</small>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted small">No related PRs found</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Function to convert markdown-like text to HTML
+function formatAIText(text) {
+    return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold text
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic text
+        .replace(/`(.*?)`/g, '<code>$1</code>')            // Inline code
+        .replace(/\n\n/g, '</p><p>')                       // Paragraphs
+        .replace(/\n/g, '<br>')                            // Line breaks
+        .replace(/^(.*)$/gm, '<p>$1</p>')                  // Wrap in paragraphs
+        .replace(/<p><\/p>/g, '')                          // Remove empty paragraphs
+        .replace(/(\d+\.\s)/g, '<br>$1');                  // Add breaks before numbered lists
+}
+
+function generateAISummary() {
+    const result = document.getElementById('ai-actions-result');
+    const summaryContent = document.getElementById('ai-summary-content');
+    
+    result.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Generating summary...';
+    
+    fetch('/ai/pr_summary/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            title: '{{ pr.title }}',
+            description: '{{ pr.description }}',
+            author: '{{ pr.author }}'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.summary) {
+            const formattedSummary = formatAIText(data.summary);
+            result.innerHTML = `<div class="alert alert-success small">Summary updated!</div>`;
+            
+            // Update the AI summary section
+            if (summaryContent) {
+                summaryContent.innerHTML = formattedSummary;
+            } else {
+                // Create new summary section if it doesn't exist
+                const summarySection = `
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-robot"></i> AI Summary</h6>
+                        <div class="mb-0" id="ai-summary-content">${formattedSummary}</div>
+                    </div>
+                `;
+                document.querySelector('.card-body').insertAdjacentHTML('afterbegin', summarySection);
+            }
+            
+            // Update the PR via API
+            fetch(`/api/prs/{{ pr.id }}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    ai_summary: data.summary
+                })
+            });
+        } else {
+            result.innerHTML = `<div class="alert alert-danger small">${data.error || 'Failed to generate summary'}</div>`;
+        }
+    })
+    .catch(error => {
+        result.innerHTML = '<div class="alert alert-danger small">Error connecting to AI service</div>';
+    });
+}
+
+function mergePR() {
+    if (confirm('Are you sure you want to merge this PR?')) {
+        fetch(`/api/prs/{{ pr.id }}/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                status: 'merged'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            location.reload();
+        });
+    }
+}
+
+function suggestReviewers() {
+    const result = document.getElementById('ai-actions-result');
+    result.innerHTML = '<div class="alert alert-info small">AI suggests: Based on the changes, consider asking team members familiar with authentication systems to review this PR.</div>';
+}
+
+function estimateReviewTime() {
+    const result = document.getElementById('ai-actions-result');
+    result.innerHTML = '<div class="alert alert-info small">Estimated review time: 15-30 minutes based on code complexity and changes.</div>';
+}
+
+function addComment(event) {
+    event.preventDefault();
+    
+    const commentText = document.getElementById('comment-text');
+    const commentsList = document.getElementById('comments-list');
+    
+    if (!commentText.value.trim()) return;
+    
+    fetch('/api/comments/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            content_type: 'pullrequest',
+            object_id: {{ pr.id }},
+            body: commentText.value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.id) {
+            // Add the new comment to the list
+            const newComment = `
+                <div class="comment mb-3 pb-3 border-bottom">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-circle me-2">
+                                {{ user.username|first|upper }}
+                            </div>
+                            <div>
+                                <strong>{{ user.get_full_name|default:user.username }}</strong>
+                                <small class="text-muted ms-2">just now</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-2 ms-4">
+                        <div class="comment-content">${commentText.value.replace(/\n/g, '<br>')}</div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove "no comments" message if it exists
+            const noCommentsMsg = commentsList.querySelector('.text-muted');
+            if (noCommentsMsg && noCommentsMsg.textContent.includes('No comments yet')) {
+                noCommentsMsg.remove();
+            }
+            
+            commentsList.insertAdjacentHTML('beforeend', newComment);
+            commentText.value = '';
+            
+            // Update comment count in header
+            const header = document.querySelector('.card-header h6');
+            const currentCount = parseInt(header.textContent.match(/\((\d+)\)/)?.[1] || '0');
+            header.innerHTML = `<i class="fas fa-comments"></i> Comments (${currentCount + 1})`;
+        }
+    })
+    .catch(error => {
+        alert('Error adding comment. Please try again.');
+    });
+}
+</script>
+{% endblock %}

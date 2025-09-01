@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - AI Workflow Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Welcome back, {{ user.first_name|default:user.username }}!</h2>
+            <div>
+                <a href="{% url 'project_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> New Project
+                </a>
+            </div>
+        </div>
+
+        <!-- Projects Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-project-diagram"></i> My Projects</h5>
+            </div>
+            <div class="card-body">
+                {% if projects %}
+                    <div class="row">
+                        {% for project in projects %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-left-primary">
+                                <div class="card-body">
+                                    <h6><a href="{% url 'project_detail' project.id %}">{{ project.name }}</a></h6>
+                                    <p class="text-muted small">{{ project.description|truncatewords:15 }}</p>
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">Team: {{ project.team.name }}</small>
+                                        <small class="text-muted">{{ project.created_at|date:"M d" }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
+                        <h5>No projects yet</h5>
+                        <p class="text-muted">Create your first project to get started!</p>
+                        <a href="{% url 'project_create' %}" class="btn btn-primary">Create Project</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Pull Requests -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-code-branch"></i> Recent Pull Requests</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_prs %}
+                    {% for pr in recent_prs %}
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <h6 class="mb-1">
+                                <a href="{% url 'pr_detail' pr.id %}">#{{ pr.number }} {{ pr.title }}</a>
+                                {% if pr.risk_flags %}
+                                    <span class="risk-flag risk-medium">
+                                        <i class="fas fa-exclamation-triangle"></i> Risk
+                                    </span>
+                                {% endif %}
+                            </h6>
+                            <small class="text-muted">{{ pr.project.name }} • by {{ pr.author }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-{% if pr.status == 'open' %}warning{% elif pr.status == 'merged' %}success{% else %}secondary{% endif %}">
+                                {{ pr.get_status_display }}
+                            </span>
+                            <br><small class="text-muted">{{ pr.created_at|timesince }} ago</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No recent pull requests</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Quick Stats -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-chart-bar"></i> Quick Stats</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ stats.total_projects }}</h4>
+                        <small>Projects</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ stats.total_prs }}</h4>
+                        <small>Pull Requests</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ stats.open_prs }}</h4>
+                        <small>Open PRs</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-info">{{ stats.merged_prs }}</h4>
+                        <small>Merged PRs</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Assistant -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-robot"></i> AI Assistant</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">Ask me anything about your projects!</p>
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Ask AI..." id="ai-input">
+                    <button class="btn btn-outline-primary" type="button" id="ai-ask">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div id="ai-response" class="mt-2"></div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-clock"></i> Recent Activity</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_activity %}
+                    {% for activity in recent_activity %}
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-{{ activity.icon }} text-muted"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-2">
+                            <small>{{ activity.message }}</small>
+                            <br><small class="text-muted">{{ activity.created_at|timesince }} ago</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted small">No recent activity</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('ai-ask').addEventListener('click', function() {
+    const input = document.getElementById('ai-input');
+    const response = document.getElementById('ai-response');
+    
+    if (!input.value.trim()) return;
+    
+    response.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Thinking...';
+    
+    fetch('/ai/task_suggest/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            question: input.value,
+            context: 'dashboard'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const formattedText = (data.suggestions || data.error)
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`(.*?)`/g, '<code>$1</code>')
+            .replace(/\n/g, '<br>');
+        response.innerHTML = `<div class="alert alert-info small">${formattedText}</div>`;
+        input.value = '';
+    })
+    .catch(error => {
+        response.innerHTML = '<div class="alert alert-danger small">Error connecting to AI</div>';
+    });
+});
+</script>
+{% endblock %}

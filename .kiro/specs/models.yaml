@@ -1,0 +1,74 @@
+models:
+  Team:
+    fields:
+      name: str
+      owner_id: int  # fk to user id (Django user)
+      created_at: datetime
+  Project:
+    fields:
+      team_id: int
+      name: str
+      repo_url: str
+      description: text
+      created_at: datetime
+  Epic:
+    fields:
+      project_id: int
+      title: str
+      description: text
+      priority: int
+  Task:
+    fields:
+      project_id: int
+      epic_id: int?
+      parent_task_id: int?
+      title: str
+      description: text
+      status: choice(backlog,in_progress,review,done)
+      priority: choice(low,medium,high)
+      assignee_id: int?
+      due_date: date?
+      created_at: datetime
+  PullRequest:
+    fields:
+      project_id: int
+      number: int
+      title: str
+      description: text
+      author: str
+      status: choice(open,merged,closed)
+      diff_url: str
+      ai_summary: text?
+      risk_flags: json?
+      created_at: datetime
+  BuildLog:
+    fields:
+      project_id: int
+      pipeline_id: str
+      commit_sha: str
+      status: choice(passed,failed)
+      log_text: text
+      ai_summary: text?
+      created_at: datetime
+  ChangelogEntry:
+    fields:
+      project_id: int
+      version: str?
+      category: choice(feature,fix,chore,breaking)
+      title: str
+      body: text
+      created_at: datetime
+  Notification:
+    fields:
+      user_id: int
+      type: str
+      payload: json
+      read_at: datetime?
+      created_at: datetime
+  Comment:
+    fields:
+      content_type: str
+      object_id: int
+      author_id: int
+      body: text
+      created_at: datetime

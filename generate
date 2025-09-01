@@ -1,0 +1,3 @@
+generate:
+  - type: django_models
+    description: "Create Django models for Users, Teams, Projects, Tasks, Repositories, Pull Requests, Commits, Issues, and Notifications based on the project spec."
