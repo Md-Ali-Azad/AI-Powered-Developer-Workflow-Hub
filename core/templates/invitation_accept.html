@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Accept Team Invitation - AI Workflow Hub{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <h5><i class="fas fa-user-check text-success"></i> Team Invitation</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="mb-4">
+                    <h4>{{ invitation.team.name }}</h4>
+                    <p class="text-muted">You've been invited to join this team</p>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-6">
+                        <div class="border rounded p-3">
+                            <i class="fas fa-user text-primary mb-2"></i>
+                            <h6>Invited by</h6>
+                            <p class="mb-0">{{ invitation.invited_by.get_full_name|default:invitation.invited_by.username }}</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3">
+                            <i class="fas fa-shield-alt text-success mb-2"></i>
+                            <h6>Role</h6>
+                            <p class="mb-0">{{ invitation.role }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>{{ invitation.role }} permissions:</strong>
+                    {% if invitation.role == 'Admin' %}
+                        <ul class="text-start mt-2 mb-0">
+                            <li>Invite and manage team members</li>
+                            <li>Manage team projects</li>
+                            <li>Full access to team content</li>
+                        </ul>
+                    {% elif invitation.role == 'Developer' %}
+                        <ul class="text-start mt-2 mb-0">
+                            <li>Access team projects</li>
+                            <li>Create and manage tasks</li>
+                            <li>Collaborate on team content</li>
+                        </ul>
+                    {% else %}
+                        <ul class="text-start mt-2 mb-0">
+                            <li>View team projects</li>
+                            <li>Read-only access to team content</li>
+                        </ul>
+                    {% endif %}
+                </div>
+
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-lg me-3">
+                        <i class="fas fa-check"></i> Accept Invitation
+                    </button>
+                </form>
+                
+                <a href="{% url 'invitation_decline' invitation.token %}" class="btn btn-outline-danger btn-lg">
+                    <i class="fas fa-times"></i> Decline
+                </a>
+
+                <div class="mt-4">
+                    <small class="text-muted">
+                        <i class="fas fa-clock"></i> 
+                        Invitation expires on {{ invitation.expires_at|date:"F d, Y" }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -29,6 +29,13 @@ urlpatterns = [
     
     # Team Views
     path('teams/create/', views.team_create_view, name='team_create'),
+    path('teams/<int:team_id>/', views.team_detail_view, name='team_detail'),
+    path('teams/<int:team_id>/invite/', views.team_invite_view, name='team_invite'),
+    
+    # Invitation Views
+    path('invitations/', views.invitation_list_view, name='invitation_list'),
+    path('invitations/<uuid:token>/accept/', views.invitation_accept_view, name='invitation_accept'),
+    path('invitations/<uuid:token>/decline/', views.invitation_decline_view, name='invitation_decline'),
     
     # API
     path('api/', include(router.urls)),

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Decline Team Invitation - AI Workflow Hub{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <h5><i class="fas fa-user-times text-warning"></i> Decline Invitation</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="mb-4">
+                    <h4>{{ invitation.team.name }}</h4>
+                    <p class="text-muted">Are you sure you want to decline this invitation?</p>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-6">
+                        <div class="border rounded p-3">
+                            <i class="fas fa-user text-primary mb-2"></i>
+                            <h6>Invited by</h6>
+                            <p class="mb-0">{{ invitation.invited_by.get_full_name|default:invitation.invited_by.username }}</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3">
+                            <i class="fas fa-shield-alt text-success mb-2"></i>
+                            <h6>Role</h6>
+                            <p class="mb-0">{{ invitation.role }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Note:</strong> Once you decline this invitation, you'll need to be invited again to join this team.
+                </div>
+
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-lg me-3">
+                        <i class="fas fa-times"></i> Decline Invitation
+                    </button>
+                </form>
+                
+                <a href="{% url 'invitation_accept' invitation.token %}" class="btn btn-outline-success btn-lg">
+                    <i class="fas fa-check"></i> Accept Instead
+                </a>
+
+                <div class="mt-4">
+                    <a href="{% url 'dashboard' %}" class="btn btn-link">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

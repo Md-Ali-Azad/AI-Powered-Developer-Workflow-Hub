@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Team Invitations - AI Workflow Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-inbox"></i> Pending Invitations</h5>
+            </div>
+            <div class="card-body">
+                {% if pending_invitations %}
+                    {% for invitation in pending_invitations %}
+                    <div class="card mb-3 border-warning">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="card-title">{{ invitation.team.name }}</h6>
+                                    <p class="card-text text-muted">
+                                        Invited by {{ invitation.invited_by.get_full_name|default:invitation.invited_by.username }}
+                                        as <strong>{{ invitation.role }}</strong>
+                                    </p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock"></i> 
+                                        Received {{ invitation.created_at|timesince }} ago
+                                    </small>
+                                    {% if invitation.is_expired %}
+                                        <br><small class="text-danger">
+                                            <i class="fas fa-exclamation-triangle"></i> 
+                                            Expired on {{ invitation.expires_at|date:"M d, Y" }}
+                                        </small>
+                                    {% else %}
+                                        <br><small class="text-success">
+                                            <i class="fas fa-check-circle"></i> 
+                                            Expires on {{ invitation.expires_at|date:"M d, Y" }}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end">
+                                    {% if not invitation.is_expired %}
+                                        <a href="{% url 'invitation_accept' invitation.token %}" class="btn btn-success btn-sm">
+                                            <i class="fas fa-check"></i> Accept
+                                        </a>
+                                        <a href="{% url 'invitation_decline' invitation.token %}" class="btn btn-outline-danger btn-sm">
+                                            <i class="fas fa-times"></i> Decline
+                                        </a>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Expired</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5>No pending invitations</h5>
+                        <p class="text-muted">You don't have any pending team invitations.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-paper-plane"></i> Sent Invitations</h5>
+            </div>
+            <div class="card-body">
+                {% if sent_invitations %}
+                    {% for invitation in sent_invitations %}
+                    <div class="card mb-3 border-info">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="card-title">{{ invitation.email }}</h6>
+                                    <p class="card-text text-muted">
+                                        Invited to <strong>{{ invitation.team.name }}</strong>
+                                        as {{ invitation.role }}
+                                    </p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock"></i> 
+                                        Sent {{ invitation.created_at|timesince }} ago
+                                    </small>
+                                    {% if invitation.is_expired %}
+                                        <br><small class="text-danger">
+                                            <i class="fas fa-exclamation-triangle"></i> 
+                                            Expired on {{ invitation.expires_at|date:"M d, Y" }}
+                                        </small>
+                                    {% else %}
+                                        <br><small class="text-success">
+                                            <i class="fas fa-check-circle"></i> 
+                                            Expires on {{ invitation.expires_at|date:"M d, Y" }}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-{% if invitation.status == 'pending' %}warning{% elif invitation.status == 'accepted' %}success{% elif invitation.status == 'declined' %}danger{% else %}secondary{% endif %}">
+                                        {{ invitation.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-paper-plane fa-3x text-muted mb-3"></i>
+                        <h5>No sent invitations</h5>
+                        <p class="text-muted">You haven't sent any team invitations yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12 text-center">
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

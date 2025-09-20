@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from .models import User
+from .models import User, Team, Membership
 
 class CustomUserCreationForm(UserCreationForm):
     email = forms.EmailField(
@@ -36,3 +36,55 @@ class CustomUserCreationForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+class TeamInviteForm(forms.Form):
+    """Form for sending team invitations."""
+    
+    email = forms.EmailField(
+        label="Email Address",
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter email address to invite'
+        }),
+        help_text="Enter the email address of the person you want to invite to your team."
+    )
+    
+    role = forms.ChoiceField(
+        choices=Membership.ROLE_CHOICES,
+        initial='Developer',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text="Select the role for the invited team member."
+    )
+    
+    def __init__(self, *args, **kwargs):
+        self.team = kwargs.pop('team', None)
+        super().__init__(*args, **kwargs)
+    
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        
+        if not self.team:
+            raise forms.ValidationError("Team is required for validation.")
+        
+        # Check if user is already a team member
+        try:
+            user = User.objects.get(email=email)
+            if Membership.objects.filter(user=user, team=self.team).exists():
+                raise forms.ValidationError(f"User with email {email} is already a member of this team.")
+        except User.DoesNotExist:
+            # User doesn't exist yet, which is fine for invitations
+            pass
+        
+        # Check for existing pending invitation
+        from .models import TeamInvitation
+        existing_invitation = TeamInvitation.objects.filter(
+            team=self.team,
+            email=email,
+            status='pending'
+        ).first()
+        
+        if existing_invitation and not existing_invitation.is_expired():
+            raise forms.ValidationError(f"A pending invitation already exists for {email}.")
+        
+        return email

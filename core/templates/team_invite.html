@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}Invite Team Members - {{ team.name }} - AI Workflow Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-user-plus"></i> Invite Members to {{ team.name }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ form.email.label_tag }}
+                        {{ form.email }}
+                        {% if form.email.help_text %}
+                            <div class="form-text">{{ form.email.help_text }}</div>
+                        {% endif %}
+                        {% if form.email.errors %}
+                            <div class="text-danger">
+                                {% for error in form.email.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.role.label_tag }}
+                        {{ form.role }}
+                        {% if form.role.help_text %}
+                            <div class="form-text">{{ form.role.help_text }}</div>
+                        {% endif %}
+                        {% if form.role.errors %}
+                            <div class="text-danger">
+                                {% for error in form.role.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'team_detail' team.id %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Team
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Send Invitation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Role Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-info-circle"></i> Role Permissions</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-primary">Admin</h6>
+                    <ul class="small text-muted">
+                        <li>Invite new members</li>
+                        <li>Manage team members</li>
+                        <li>Manage projects</li>
+                        <li>View all team content</li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <h6 class="text-success">Developer</h6>
+                    <ul class="small text-muted">
+                        <li>View team content</li>
+                        <li>Access team projects</li>
+                        <li>Create and manage tasks</li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <h6 class="text-info">Viewer</h6>
+                    <ul class="small text-muted">
+                        <li>View team content</li>
+                        <li>View team projects</li>
+                        <li>Read-only access</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Invitations -->
+        {% if sent_invitations %}
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-clock"></i> Recent Invitations</h6>
+            </div>
+            <div class="card-body">
+                {% for invitation in sent_invitations %}
+                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                    <div>
+                        <h6 class="mb-1">{{ invitation.email }}</h6>
+                        <small class="text-muted">{{ invitation.role }} • {{ invitation.created_at|timesince }} ago</small>
+                    </div>
+                    <span class="badge bg-{% if invitation.status == 'pending' %}warning{% elif invitation.status == 'accepted' %}success{% elif invitation.status == 'declined' %}danger{% else %}secondary{% endif %}">
+                        {{ invitation.get_status_display }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

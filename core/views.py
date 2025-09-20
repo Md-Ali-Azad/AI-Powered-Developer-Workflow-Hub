@@ -3,16 +3,17 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Q
-from .forms import CustomUserCreationForm
+from .forms import CustomUserCreationForm, TeamInviteForm
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import (Project, Task, PullRequest, BuildLog, ChangelogEntry, 
-                    Notification, Team, Membership, User, Comment)
+                    Notification, Team, Membership, User, Comment, TeamInvitation)
 from .serializers import (ProjectSerializer, TaskSerializer, PullRequestSerializer, 
                          BuildLogSerializer, ChangelogEntrySerializer, NotificationSerializer)
 from . import hooks
+from .services import InvitationService, TeamPermissions
 import google.generativeai as genai
 import os
 
@@ -430,3 +431,230 @@ def profile_view(request):
     }
     
     return render(request, 'profile.html', {'user_stats': user_stats})
+
+
+# Team Invitation Views
+
+@login_required
+def team_invite_view(request, team_id):
+    """View for sending team invitations."""
+    team = get_object_or_404(Team, id=team_id)
+    
+    # Check if user has permission to invite members
+    if not TeamPermissions.can_invite_members(request.user, team):
+        error_msg = TeamPermissions.get_permission_error_message(
+            request.user, team, 'invite_members'
+        )
+        messages.error(request, error_msg)
+        return redirect('team_detail', team_id=team.id)
+    
+    if request.method == 'POST':
+        form = TeamInviteForm(request.POST, team=team)
+        if form.is_valid():
+            try:
+                invitation = InvitationService.send_invitation(
+                    team=team,
+                    inviter=request.user,
+                    email=form.cleaned_data['email'],
+                    role=form.cleaned_data['role']
+                )
+                
+                messages.success(
+                    request, 
+                    f"Invitation sent to {form.cleaned_data['email']} successfully!"
+                )
+                return redirect('team_detail', team_id=team.id)
+                
+            except (ValueError, PermissionError) as e:
+                messages.error(request, str(e))
+            except Exception as e:
+                messages.error(request, "An error occurred while sending the invitation. Please try again.")
+    else:
+        form = TeamInviteForm(team=team)
+    
+    # Get existing invitations for this team
+    sent_invitations = InvitationService.get_sent_invitations(request.user, team)
+    
+    return render(request, 'team_invite.html', {
+        'form': form,
+        'team': team,
+        'sent_invitations': sent_invitations
+    })
+
+
+@login_required
+def invitation_accept_view(request, token):
+    """View for accepting team invitations."""
+    try:
+        invitation = get_object_or_404(TeamInvitation, token=token, status='pending')
+        
+        # Check if invitation is expired
+        if invitation.is_expired():
+            invitation.status = 'expired'
+            invitation.save()
+            error_msg = "This invitation has expired."
+            if request.headers.get('Content-Type') == 'application/json':
+                return JsonResponse({'error': error_msg}, status=400)
+            messages.error(request, error_msg)
+            return redirect('dashboard')
+        
+        # Check if the current user's email matches the invitation
+        if invitation.email != request.user.email:
+            error_msg = "This invitation is not for your email address."
+            if request.headers.get('Content-Type') == 'application/json':
+                return JsonResponse({'error': error_msg}, status=403)
+            messages.error(request, error_msg)
+            return redirect('dashboard')
+        
+        if request.method == 'POST':
+            try:
+                membership = InvitationService.accept_invitation(token, request.user)
+                success_msg = f"You have successfully joined the team '{invitation.team.name}' as a {membership.role}!"
+                
+                # Handle AJAX requests
+                if request.headers.get('Content-Type') == 'application/json':
+                    return JsonResponse({
+                        'success': True,
+                        'message': success_msg,
+                        'team_id': invitation.team.id,
+                        'team_name': invitation.team.name,
+                        'role': membership.role
+                    })
+                
+                messages.success(request, success_msg)
+                return redirect('team_detail', team_id=invitation.team.id)
+                
+            except ValueError as e:
+                error_msg = str(e)
+                if request.headers.get('Content-Type') == 'application/json':
+                    return JsonResponse({'error': error_msg}, status=400)
+                messages.error(request, error_msg)
+                return redirect('dashboard')
+            except Exception as e:
+                error_msg = "An error occurred while accepting the invitation. Please try again."
+                if request.headers.get('Content-Type') == 'application/json':
+                    return JsonResponse({'error': error_msg}, status=500)
+                messages.error(request, error_msg)
+                return redirect('dashboard')
+        
+        return render(request, 'invitation_accept.html', {
+            'invitation': invitation
+        })
+        
+    except TeamInvitation.DoesNotExist:
+        error_msg = "Invalid or expired invitation."
+        if request.headers.get('Content-Type') == 'application/json':
+            return JsonResponse({'error': error_msg}, status=404)
+        messages.error(request, error_msg)
+        return redirect('dashboard')
+
+
+@login_required  
+def invitation_decline_view(request, token):
+    """View for declining team invitations."""
+    try:
+        invitation = get_object_or_404(TeamInvitation, token=token, status='pending')
+        
+        # Check if invitation is expired
+        if invitation.is_expired():
+            invitation.status = 'expired'
+            invitation.save()
+            messages.error(request, "This invitation has expired.")
+            return redirect('dashboard')
+        
+        # Check if the current user's email matches the invitation
+        if invitation.email != request.user.email:
+            messages.error(request, "This invitation is not for your email address.")
+            return redirect('dashboard')
+        
+        if request.method == 'POST':
+            try:
+                InvitationService.decline_invitation(token, request.user)
+                messages.info(
+                    request, 
+                    f"You have declined the invitation to join '{invitation.team.name}'."
+                )
+                return redirect('dashboard')
+                
+            except ValueError as e:
+                messages.error(request, str(e))
+                return redirect('dashboard')
+            except Exception as e:
+                messages.error(request, "An error occurred while declining the invitation. Please try again.")
+                return redirect('dashboard')
+        
+        return render(request, 'invitation_decline.html', {
+            'invitation': invitation
+        })
+        
+    except TeamInvitation.DoesNotExist:
+        messages.error(request, "Invalid or expired invitation.")
+        return redirect('dashboard')
+
+
+@login_required
+def invitation_list_view(request):
+    """View for listing user's pending invitations."""
+    pending_invitations = InvitationService.get_pending_invitations(request.user)
+    sent_invitations = InvitationService.get_sent_invitations(request.user)
+    
+    return render(request, 'invitation_list.html', {
+        'pending_invitations': pending_invitations,
+        'sent_invitations': sent_invitations
+    })
+
+
+@login_required
+def team_detail_view(request, team_id):
+    """View for team dashboard with members, projects, and activities."""
+    team = get_object_or_404(Team, id=team_id)
+    
+    # Check if user has access to this team
+    if not TeamPermissions.can_view_team(request.user, team):
+        messages.error(request, 'You do not have access to this team.')
+        return redirect('dashboard')
+    
+    # Get team members
+    team_members = Membership.objects.filter(team=team).select_related('user')
+    
+    # Get team projects
+    team_projects = team.project_set.all().order_by('-created_at')
+    
+    # Get recent pull requests from team projects
+    recent_prs = PullRequest.objects.filter(
+        project__team=team
+    ).order_by('-created_at')[:10]
+    
+    # Get team invitations (only for users who can invite)
+    team_invitations = []
+    if TeamPermissions.can_invite_members(request.user, team):
+        team_invitations = TeamInvitation.objects.filter(
+            team=team
+        ).order_by('-created_at')[:10]
+    
+    # Team stats
+    stats = {
+        'total_members': team_members.count(),
+        'total_projects': team_projects.count(),
+        'total_prs': recent_prs.count(),
+        'pending_invitations': team_invitations.count() if team_invitations else 0,
+    }
+    
+    # User permissions for this team
+    user_permissions = {
+        'can_invite_members': TeamPermissions.can_invite_members(request.user, team),
+        'can_manage_members': TeamPermissions.can_manage_members(request.user, team),
+        'can_manage_projects': TeamPermissions.can_manage_projects(request.user, team),
+        'user_role': TeamPermissions.get_user_role(request.user, team),
+        'is_owner': team.owner == request.user,
+    }
+    
+    return render(request, 'team_detail.html', {
+        'team': team,
+        'team_members': team_members,
+        'team_projects': team_projects,
+        'recent_prs': recent_prs,
+        'team_invitations': team_invitations,
+        'stats': stats,
+        'user_permissions': user_permissions,
+    })

@@ -57,13 +57,19 @@
             
             {% if user.is_authenticated %}
             <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{% url 'invitation_list' %}">
+                    <i class="fas fa-envelope"></i> Invitations
+                </a>
                 <div class="nav-item dropdown">
                     <a class="nav-link position-relative" href="#" data-bs-toggle="dropdown">
                         <i class="fas fa-bell"></i>
                         <span class="notification-badge" id="notification-count">0</span>
                     </a>
-                    <div class="dropdown-menu dropdown-menu-end" id="notifications-dropdown">
-                        <h6 class="dropdown-header">Notifications</h6>
+                    <div class="dropdown-menu dropdown-menu-end" id="notifications-dropdown" style="min-width: 350px; max-height: 400px; overflow-y: auto;">
+                        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                            <h6 class="mb-0">Notifications</h6>
+                            <a href="{% url 'invitation_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                        </div>
                         <div id="notifications-list">
                             <p class="dropdown-item-text text-muted">No new notifications</p>
                         </div>
@@ -75,6 +81,7 @@
                     </a>
                     <div class="dropdown-menu">
                         <a class="dropdown-item" href="{% url 'profile' %}">Profile</a>
+                        <a class="dropdown-item" href="{% url 'invitation_list' %}">Team Invitations</a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item" href="{% url 'logout' %}">Logout</a>
                     </div>
@@ -118,13 +125,190 @@
                         list.innerHTML = '<p class="dropdown-item-text text-muted">No new notifications</p>';
                     } else {
                         list.innerHTML = data.results.slice(0, 5).map(n => 
-                            `<a class="dropdown-item ${n.read_at ? 'text-muted' : ''}" href="#">
-                                <small>${n.type}</small><br>
-                                ${JSON.stringify(n.payload).substring(0, 50)}...
-                            </a>`
+                            formatNotification(n)
                         ).join('');
                     }
                 });
+        }
+
+        // Format notification based on type
+        function formatNotification(notification) {
+            const isRead = notification.read_at ? 'text-muted' : '';
+            const payload = notification.payload;
+            
+            switch(notification.type) {
+                case 'team_invitation':
+                    return `
+                        <div class="dropdown-item-text ${isRead}" style="white-space: normal; max-width: 300px;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <strong>Team Invitation</strong><br>
+                                    <small>${payload.invited_by_name || payload.invited_by} invited you to join <strong>${payload.team_name}</strong> as ${payload.role}</small>
+                                </div>
+                                <small class="text-muted">${formatTimeAgo(notification.created_at)}</small>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-success btn-sm me-1" onclick="handleInvitationAction('${payload.invitation_token}', 'accept', ${notification.id})">
+                                    <i class="fas fa-check"></i> Accept
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="handleInvitationAction('${payload.invitation_token}', 'decline', ${notification.id})">
+                                    <i class="fas fa-times"></i> Decline
+                                </button>
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                    `;
+                    
+                case 'invitation_accepted':
+                    return `
+                        <div class="dropdown-item-text ${isRead}" style="white-space: normal; max-width: 300px;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <strong>Invitation Accepted</strong><br>
+                                    <small><strong>${payload.accepted_by_name || payload.accepted_by}</strong> joined your team <strong>${payload.team_name}</strong></small>
+                                </div>
+                                <small class="text-muted">${formatTimeAgo(notification.created_at)}</small>
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                    `;
+                    
+                case 'invitation_declined':
+                    return `
+                        <div class="dropdown-item-text ${isRead}" style="white-space: normal; max-width: 300px;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <strong>Invitation Declined</strong><br>
+                                    <small>Your invitation to <strong>${payload.declined_by_email}</strong> for team <strong>${payload.team_name}</strong> was declined</small>
+                                </div>
+                                <small class="text-muted">${formatTimeAgo(notification.created_at)}</small>
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                    `;
+                    
+                case 'team_member_added':
+                    return `
+                        <div class="dropdown-item-text ${isRead}" style="white-space: normal; max-width: 300px;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <strong>New Team Member</strong><br>
+                                    <small><strong>${payload.new_member_name || payload.new_member}</strong> joined team <strong>${payload.team_name}</strong> as ${payload.role}</small>
+                                </div>
+                                <small class="text-muted">${formatTimeAgo(notification.created_at)}</small>
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                    `;
+                    
+                default:
+                    return `
+                        <a class="dropdown-item ${isRead}" href="#" onclick="markNotificationRead(${notification.id})">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <small>${notification.type.replace('_', ' ').toUpperCase()}</small><br>
+                                    <span>${JSON.stringify(payload).substring(0, 50)}...</span>
+                                </div>
+                                <small class="text-muted">${formatTimeAgo(notification.created_at)}</small>
+                            </div>
+                        </a>
+                    `;
+            }
+        }
+
+        // Format time ago
+        function formatTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - date) / 1000);
+            
+            if (diffInSeconds < 60) return 'Just now';
+            if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+            if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+            return `${Math.floor(diffInSeconds / 86400)}d ago`;
+        }
+
+        // Handle invitation actions (accept/decline)
+        function handleInvitationAction(token, action, notificationId) {
+            const url = action === 'accept' 
+                ? `/invitations/${token}/accept/`
+                : `/invitations/${token}/decline/`;
+                
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Mark notification as read
+                    markNotificationRead(notificationId);
+                    // Reload notifications
+                    loadNotifications();
+                    // Show success message
+                    showToast(`Invitation ${action}ed successfully!`, 'success');
+                } else {
+                    response.json().then(data => {
+                        showToast(data.error || `Failed to ${action} invitation`, 'error');
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast(`Failed to ${action} invitation`, 'error');
+            });
+        }
+
+        // Mark notification as read
+        function markNotificationRead(notificationId) {
+            fetch(`/api/notifications/${notificationId}/mark_read/`, {
+                method: 'PATCH',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            });
+        }
+
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 5000);
         }
 
         {% if user.is_authenticated %}

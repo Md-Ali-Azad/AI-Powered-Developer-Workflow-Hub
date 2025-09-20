@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ team.name }} - Team Dashboard - AI Workflow Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <!-- Team Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-users"></i> {{ team.name }}</h2>
+                <p class="text-muted">
+                    Owned by {{ team.owner.get_full_name|default:team.owner.username }}
+                    • Created {{ team.created_at|date:"M d, Y" }}
+                </p>
+            </div>
+            <div>
+                {% if user_permissions.can_invite_members %}
+                    <a href="{% url 'team_invite' team.id %}" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> Invite Members
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Team Projects -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-project-diagram"></i> Team Projects</h5>
+            </div>
+            <div class="card-body">
+                {% if team_projects %}
+                    <div class="row">
+                        {% for project in team_projects %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-left-primary">
+                                <div class="card-body">
+                                    <h6><a href="{% url 'project_detail' project.id %}">{{ project.name }}</a></h6>
+                                    <p class="text-muted small">{{ project.description|truncatewords:15 }}</p>
+                                    <small class="text-muted">{{ project.created_at|date:"M d" }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
+                        <h5>No projects yet</h5>
+                        <p class="text-muted">Create your first team project to get started!</p>
+                        {% if user_permissions.can_manage_projects %}
+                            <a href="{% url 'project_create' %}" class="btn btn-primary">Create Project</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Pull Requests -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-code-branch"></i> Recent Pull Requests</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_prs %}
+                    {% for pr in recent_prs %}
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <h6 class="mb-1">
+                                <a href="{% url 'pr_detail' pr.id %}">#{{ pr.number }} {{ pr.title }}</a>
+                                {% if pr.risk_flags %}
+                                    <span class="risk-flag risk-medium">
+                                        <i class="fas fa-exclamation-triangle"></i> Risk
+                                    </span>
+                                {% endif %}
+                            </h6>
+                            <small class="text-muted">{{ pr.project.name }} • by {{ pr.author }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-{% if pr.status == 'open' %}warning{% elif pr.status == 'merged' %}success{% else %}secondary{% endif %}">
+                                {{ pr.get_status_display }}
+                            </span>
+                            <br><small class="text-muted">{{ pr.created_at|timesince }} ago</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No recent pull requests</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Team Stats -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-chart-bar"></i> Team Stats</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ stats.total_members }}</h4>
+                        <small>Members</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ stats.total_projects }}</h4>
+                        <small>Projects</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ stats.total_prs }}</h4>
+                        <small>Pull Requests</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-info">{{ stats.pending_invitations }}</h4>
+                        <small>Pending Invites</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Members -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-users"></i> Team Members</h6>
+            </div>
+            <div class="card-body">
+                {% for member in team_members %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle me-2">
+                            {{ member.user.first_name.0|default:member.user.username.0|upper }}
+                        </div>
+                        <div>
+                            <h6 class="mb-0">{{ member.user.get_full_name|default:member.user.username }}</h6>
+                            <small class="text-muted">{{ member.user.email }}</small>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-{% if member.role == 'Admin' %}primary{% elif member.role == 'Developer' %}success{% else %}info{% endif %}">
+                            {{ member.role }}
+                        </span>
+                        {% if member.user == team.owner %}
+                            <br><small class="text-muted">Owner</small>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Pending Invitations (Admin only) -->
+        {% if user_permissions.can_invite_members and team_invitations %}
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-clock"></i> Pending Invitations</h6>
+            </div>
+            <div class="card-body">
+                {% for invitation in team_invitations %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h6 class="mb-0">{{ invitation.email }}</h6>
+                        <small class="text-muted">{{ invitation.role }} • {{ invitation.created_at|timesince }} ago</small>
+                    </div>
+                    <span class="badge bg-warning">{{ invitation.get_status_display }}</span>
+                </div>
+                {% endfor %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'invitation_list' %}" class="btn btn-sm btn-outline-primary">
+                        View All Invitations
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
