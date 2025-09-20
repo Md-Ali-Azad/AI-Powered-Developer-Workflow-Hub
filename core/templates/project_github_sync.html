@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+
+{% block title %}GitHub Sync - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fab fa-github"></i> Sync {{ project.name }} with GitHub</h5>
+            </div>
+            <div class="card-body">
+                {% if not repo_accessible %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Repository Not Accessible:</strong> 
+                        The GitHub repository may be private, not exist, or the API token may lack proper permissions.
+                        Some sync features may not work properly.
+                    </div>
+                {% endif %}
+                
+                <!-- Repository Information -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-info-circle"></i> Repository Information</h6>
+                        {% if repo_info %}
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Repository:</strong></td>
+                                    <td>
+                                        <a href="{{ repo_info.url }}" target="_blank" class="text-decoration-none">
+                                            {{ repo_info.full_name }} <i class="fas fa-external-link-alt"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% if repo_info.description %}
+                                <tr>
+                                    <td><strong>Description:</strong></td>
+                                    <td>{{ repo_info.description }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if repo_info.language %}
+                                <tr>
+                                    <td><strong>Language:</strong></td>
+                                    <td>{{ repo_info.language }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if repo_info.default_branch %}
+                                <tr>
+                                    <td><strong>Default Branch:</strong></td>
+                                    <td>{{ repo_info.default_branch }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if repo_info.private is not None %}
+                                <tr>
+                                    <td><strong>Visibility:</strong></td>
+                                    <td>
+                                        {% if repo_info.private %}
+                                            <span class="badge bg-warning">Private</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Public</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        {% else %}
+                            <p class="text-muted">Repository information not available.</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-chart-bar"></i> Repository Stats</h6>
+                        {% if repo_info and repo_accessible %}
+                            <table class="table table-sm">
+                                {% if repo_info.stars is not None %}
+                                <tr>
+                                    <td><strong>Stars:</strong></td>
+                                    <td><i class="fas fa-star text-warning"></i> {{ repo_info.stars }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if repo_info.forks is not None %}
+                                <tr>
+                                    <td><strong>Forks:</strong></td>
+                                    <td><i class="fas fa-code-branch"></i> {{ repo_info.forks }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if repo_info.created_at %}
+                                <tr>
+                                    <td><strong>Created:</strong></td>
+                                    <td>{{ repo_info.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if repo_info.updated_at %}
+                                <tr>
+                                    <td><strong>Last Updated:</strong></td>
+                                    <td>{{ repo_info.updated_at|timesince }} ago</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        {% else %}
+                            <p class="text-muted">Statistics not available.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Sync Options Form -->
+                <form method="post" id="sync-form">
+                    {% csrf_token %}
+                    
+                    <h6><i class="fas fa-sync"></i> Sync Options</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-light">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-project-diagram"></i> Project Sync</h6>
+                                    
+                                    <div class="form-check mb-3">
+                                        {{ form.sync_description }}
+                                        <label class="form-check-label" for="{{ form.sync_description.id_for_label }}">
+                                            {{ form.sync_description.label }}
+                                        </label>
+                                        <div class="form-text">
+                                            Update project description with repository description if empty
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-light">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-code-branch"></i> Pull Request Import</h6>
+                                    
+                                    <div class="form-check mb-3">
+                                        {{ form.import_pull_requests }}
+                                        <label class="form-check-label" for="{{ form.import_pull_requests.id_for_label }}">
+                                            {{ form.import_pull_requests.label }}
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        {{ form.pr_state.label_tag }}
+                                        {{ form.pr_state }}
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        {{ form.pr_limit.label_tag }}
+                                        {{ form.pr_limit }}
+                                        <div class="form-text">{{ form.pr_limit.help_text }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'project_detail' project.id %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Project
+                        </a>
+                        <button type="submit" class="btn btn-primary" {% if not repo_accessible %}disabled{% endif %}>
+                            <i class="fas fa-sync"></i> Start Sync
+                        </button>
+                    </div>
+                </form>
+                
+                {% if not repo_accessible %}
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            Sync is disabled because the repository is not accessible. 
+                            Please check the repository URL and GitHub API configuration.
+                        </small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6><i class="fas fa-bolt"></i> Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-primary w-100" id="import-single-pr-btn">
+                            <i class="fas fa-download"></i> Import Single PR
+                        </button>
+                        <div class="form-text mt-1">Import a specific pull request by number</div>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{{ project.repo_url }}" target="_blank" class="btn btn-outline-secondary w-100">
+                            <i class="fab fa-github"></i> View on GitHub
+                        </a>
+                        <div class="form-text mt-1">Open repository in GitHub</div>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-info w-100" id="refresh-repo-info-btn">
+                            <i class="fas fa-refresh"></i> Refresh Info
+                        </button>
+                        <div class="form-text mt-1">Reload repository information</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Single PR Modal -->
+<div class="modal fade" id="importPRModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-download"></i> Import Pull Request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="single-pr-number" class="form-label">PR Number</label>
+                    <input type="number" class="form-control" id="single-pr-number" placeholder="Enter PR number">
+                </div>
+                <div id="import-pr-result"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="import-pr-confirm-btn">
+                    <i class="fas fa-download"></i> Import PR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const syncForm = document.getElementById('sync-form');
+    const importPRBtn = document.getElementById('import-single-pr-btn');
+    const refreshBtn = document.getElementById('refresh-repo-info-btn');
+    const importPRModal = new bootstrap.Modal(document.getElementById('importPRModal'));
+    const importPRConfirmBtn = document.getElementById('import-pr-confirm-btn');
+    
+    // Form submission
+    syncForm.addEventListener('submit', function(e) {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+        submitBtn.disabled = true;
+    });
+    
+    // Import single PR
+    if (importPRBtn) {
+        importPRBtn.addEventListener('click', function() {
+            importPRModal.show();
+        });
+    }
+    
+    if (importPRConfirmBtn) {
+        importPRConfirmBtn.addEventListener('click', function() {
+            const prNumber = document.getElementById('single-pr-number').value.trim();
+            const resultDiv = document.getElementById('import-pr-result');
+            
+            if (!prNumber) {
+                resultDiv.innerHTML = '<div class="alert alert-warning">Please enter a PR number.</div>';
+                return;
+            }
+            
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+            
+            fetch('{% url "github_import_pr" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    project_id: {{ project.id }},
+                    pr_number: prNumber
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                    setTimeout(() => {
+                        importPRModal.hide();
+                        window.location.href = data.pr_url;
+                    }, 1500);
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                }
+            })
+            .catch(error => {
+                resultDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            })
+            .finally(() => {
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-download"></i> Import PR';
+            });
+        });
+    }
+    
+    // Refresh repository info
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            window.location.reload();
+        });
+    }
+});
+</script>
+{% endblock %}

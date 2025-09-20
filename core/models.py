@@ -78,12 +78,34 @@ class TeamInvitation(models.Model):
 class Project(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
-    repo_url = models.URLField(blank=True, null=True)
+    repo_url = models.URLField(blank=True, null=True, help_text="GitHub repository URL")
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
         return self.name
+    
+    def clean(self):
+        """Validate the repository URL if provided."""
+        if self.repo_url:
+            from .github_service import validate_github_repository_url
+            validate_github_repository_url(self.repo_url)
+    
+    def save(self, *args, **kwargs):
+        """Override save to run validation."""
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    @property
+    def github_repo_info(self):
+        """Get GitHub repository information."""
+        if not self.repo_url:
+            return None
+        
+        from .github_service import get_github_service
+        service = get_github_service()
+        result = service.validate_repository_url(self.repo_url)
+        return result.get('repo_info')
 
 class Epic(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)

@@ -25,6 +25,7 @@ urlpatterns = [
     # Project Views
     path('projects/create/', views.project_create_view, name='project_create'),
     path('projects/<int:project_id>/', views.project_detail_view, name='project_detail'),
+    path('projects/<int:project_id>/github-sync/', views.project_github_sync_view, name='project_github_sync'),
     
     # PR Views
     path('projects/<int:project_id>/prs/create/', views.pr_create_view, name='pr_create'),
@@ -56,4 +57,9 @@ urlpatterns = [
     
     # Comment Endpoints
     path('api/comments/', views.add_comment, name='add_comment'),
+    
+    # GitHub Integration Endpoints
+    path('api/github/validate-repo/', views.github_validate_repo, name='github_validate_repo'),
+    path('api/github/fetch-pr/', views.github_fetch_pr, name='github_fetch_pr'),
+    path('api/github/import-pr/', views.github_import_pr, name='github_import_pr'),
 ]

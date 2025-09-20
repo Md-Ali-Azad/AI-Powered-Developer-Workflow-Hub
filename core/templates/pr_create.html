@@ -6,44 +6,101 @@
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="fas fa-code-branch"></i> Create Pull Request for {{ project.name }}</h5>
+                {% if can_fetch_from_github %}
+                    <span class="badge bg-success"><i class="fab fa-github"></i> Auto-fetch Available</span>
+                {% elif github_configured %}
+                    <span class="badge bg-warning"><i class="fas fa-exclamation-triangle"></i> No Repo URL</span>
+                {% else %}
+                    <span class="badge bg-secondary"><i class="fas fa-times"></i> Manual Entry Only</span>
+                {% endif %}
             </div>
             <div class="card-body">
+                {% if not github_configured %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Manual Entry Mode:</strong> 
+                        GitHub integration is not configured. You'll need to enter all PR details manually.
+                    </div>
+                {% elif not project.repo_url %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>No Repository URL:</strong> 
+                        This project doesn't have a GitHub repository URL configured. 
+                        <a href="{% url 'project_detail' project.id %}">Update project settings</a> to enable auto-fetch.
+                    </div>
+                {% endif %}
+                
                 <form method="post" id="pr-form">
                     {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="id_number" class="form-label">PR Number</label>
-                        <input type="number" class="form-control" name="number" id="id_number" required>
-                        <div class="form-text">Enter the PR number from your repository</div>
-                    </div>
                     
                     <div class="mb-3">
-                        <label for="id_title" class="form-label">Title</label>
-                        <input type="text" class="form-control" name="title" id="id_title" required>
+                        {{ form.number.label_tag }}
+                        <div class="input-group">
+                            {{ form.number }}
+                            {% if can_fetch_from_github %}
+                                <button type="button" class="btn btn-outline-secondary" id="fetch-pr-btn">
+                                    <i class="fab fa-github"></i> Fetch from GitHub
+                                </button>
+                            {% endif %}
+                        </div>
+                        {% if form.number.errors %}
+                            <div class="text-danger">{{ form.number.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-text">Enter the PR number from your repository</div>
+                        <div id="fetch-result"></div>
+                    </div>
+                    
+                    {% if can_fetch_from_github %}
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.fetch_from_github }}
+                                <label class="form-check-label" for="{{ form.fetch_from_github.id_for_label }}">
+                                    <i class="fab fa-github"></i> {{ form.fetch_from_github.label }}
+                                </label>
+                            </div>
+                            <div class="form-text">{{ form.fetch_from_github.help_text }}</div>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        {{ form.title.label_tag }}
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger">{{ form.title.errors.0 }}</div>
+                        {% endif %}
                         <div class="form-text">A clear, descriptive title for your pull request</div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="id_description" class="form-label">Description</label>
-                        <textarea class="form-control" name="description" id="id_description" rows="6" required></textarea>
+                        {{ form.description.label_tag }}
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger">{{ form.description.errors.0 }}</div>
+                        {% endif %}
                         <div class="form-text">Describe what changes you made and why</div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="id_author" class="form-label">Author</label>
-                        <input type="text" class="form-control" name="author" id="id_author" value="{{ user.username }}" required>
+                        {{ form.author.label_tag }}
+                        {{ form.author }}
+                        {% if form.author.errors %}
+                            <div class="text-danger">{{ form.author.errors.0 }}</div>
+                        {% endif %}
                     </div>
                     
                     <div class="mb-3">
-                        <label for="id_diff_url" class="form-label">Diff URL</label>
-                        <input type="url" class="form-control" name="diff_url" id="id_diff_url" required 
-                               placeholder="https://github.com/username/repo/pull/123">
-                        <div class="form-text">Link to the pull request diff on GitHub</div>
+                        {{ form.diff_url.label_tag }}
+                        {{ form.diff_url }}
+                        {% if form.diff_url.errors %}
+                            <div class="text-danger">{{ form.diff_url.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-text">Link to the pull request on GitHub</div>
                     </div>
 
                     <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="generate_ai_summary" checked>
+                        <input class="form-check-input" type="checkbox" name="generate_ai_summary" id="generate_ai_summary" checked>
                         <label class="form-check-label" for="generate_ai_summary">
                             <i class="fas fa-robot"></i> Generate AI summary automatically
                         </label>
@@ -64,10 +121,91 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('pr-form').addEventListener('submit', function(e) {
-    const submitBtn = this.querySelector('button[type="submit"]');
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
-    submitBtn.disabled = true;
+document.addEventListener('DOMContentLoaded', function() {
+    const prForm = document.getElementById('pr-form');
+    const fetchBtn = document.getElementById('fetch-pr-btn');
+    const fetchResult = document.getElementById('fetch-result');
+    const prNumberInput = document.getElementById('id_number');
+    
+    // Auto-fetch when PR number changes (if enabled)
+    if (prNumberInput && document.getElementById('id_fetch_from_github')) {
+        prNumberInput.addEventListener('blur', function() {
+            const fetchCheckbox = document.getElementById('id_fetch_from_github');
+            if (fetchCheckbox && fetchCheckbox.checked && this.value) {
+                fetchPRFromGitHub();
+            }
+        });
+    }
+    
+    // Manual fetch button
+    if (fetchBtn) {
+        fetchBtn.addEventListener('click', fetchPRFromGitHub);
+    }
+    
+    function fetchPRFromGitHub() {
+        const prNumber = prNumberInput.value.trim();
+        
+        if (!prNumber) {
+            showFetchResult('Please enter a PR number first.', 'warning');
+            return;
+        }
+        
+        if (fetchBtn) {
+            fetchBtn.disabled = true;
+            fetchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
+        }
+        
+        fetch('{% url "github_fetch_pr" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                repo_url: '{{ project.repo_url }}',
+                pr_number: prNumber
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.found) {
+                const pr = data.pr_info;
+                
+                // Fill form fields
+                document.getElementById('id_title').value = pr.title || '';
+                document.getElementById('id_description').value = pr.body || '';
+                document.getElementById('id_author').value = pr.author || '';
+                document.getElementById('id_diff_url').value = pr.html_url || '';
+                
+                showFetchResult('✓ PR details fetched successfully from GitHub!', 'success');
+            } else {
+                showFetchResult('✗ ' + (data.error || 'PR not found'), 'danger');
+            }
+        })
+        .catch(error => {
+            showFetchResult('✗ Error fetching PR: ' + error.message, 'danger');
+        })
+        .finally(() => {
+            if (fetchBtn) {
+                fetchBtn.disabled = false;
+                fetchBtn.innerHTML = '<i class="fab fa-github"></i> Fetch from GitHub';
+            }
+        });
+    }
+    
+    function showFetchResult(message, type) {
+        fetchResult.innerHTML = `<div class="alert alert-${type} mt-2">${message}</div>`;
+        setTimeout(() => {
+            fetchResult.innerHTML = '';
+        }, 5000);
+    }
+    
+    // Form submission
+    prForm.addEventListener('submit', function(e) {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+        submitBtn.disabled = true;
+    });
 });
 </script>
 {% endblock %}

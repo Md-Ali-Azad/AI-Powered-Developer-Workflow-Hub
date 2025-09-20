@@ -6,38 +6,73 @@
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="fas fa-plus"></i> Create New Project</h5>
+                {% if github_configured %}
+                    <span class="badge bg-success"><i class="fab fa-github"></i> GitHub Connected</span>
+                {% else %}
+                    <span class="badge bg-warning"><i class="fas fa-exclamation-triangle"></i> GitHub Not Configured</span>
+                {% endif %}
             </div>
             <div class="card-body">
-                <form method="post">
+                {% if not github_configured %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>GitHub Integration Not Available:</strong> 
+                        Repository URLs will be stored but cannot be validated or synced automatically. 
+                        Contact your administrator to configure GitHub API access.
+                    </div>
+                {% endif %}
+                
+                <form method="post" id="project-form">
                     {% csrf_token %}
+                    
                     <div class="mb-3">
-                        <label for="id_name" class="form-label">Project Name</label>
-                        <input type="text" class="form-control" name="name" id="id_name" required>
+                        {{ form.name.label_tag }}
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="text-danger">{{ form.name.errors.0 }}</div>
+                        {% endif %}
                         <div class="form-text">Choose a descriptive name for your project</div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="id_description" class="form-label">Description</label>
-                        <textarea class="form-control" name="description" id="id_description" rows="4" required></textarea>
+                        {{ form.description.label_tag }}
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger">{{ form.description.errors.0 }}</div>
+                        {% endif %}
                         <div class="form-text">Describe what this project is about</div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="id_repo_url" class="form-label">Repository URL (Optional)</label>
-                        <input type="url" class="form-control" name="repo_url" id="id_repo_url" placeholder="https://github.com/username/repo">
-                        <div class="form-text">Link to your GitHub repository</div>
+                        {{ form.repo_url.label_tag }}
+                        <div class="input-group">
+                            {{ form.repo_url }}
+                            {% if github_configured %}
+                                <button type="button" class="btn btn-outline-secondary" id="validate-repo-btn">
+                                    <i class="fas fa-check"></i> Validate
+                                </button>
+                            {% endif %}
+                        </div>
+                        {% if form.repo_url.errors %}
+                            <div class="text-danger">{{ form.repo_url.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-text">
+                            Link to your GitHub repository
+                            {% if github_configured %}
+                                (will be validated automatically)
+                            {% endif %}
+                        </div>
+                        <div id="repo-validation-result"></div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="id_team" class="form-label">Team</label>
-                        <select class="form-select" name="team" id="id_team" required>
-                            <option value="">Select a team...</option>
-                            {% for team in teams %}
-                                <option value="{{ team.id }}">{{ team.name }}</option>
-                            {% endfor %}
-                        </select>
+                        {{ form.team.label_tag }}
+                        {{ form.team }}
+                        {% if form.team.errors %}
+                            <div class="text-danger">{{ form.team.errors.0 }}</div>
+                        {% endif %}
                         <div class="form-text">
                             Don't see your team? <a href="{% url 'team_create' %}">Create a new team</a>
                         </div>
@@ -54,4 +89,68 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const repoUrlInput = document.getElementById('id_repo_url');
+    const validateBtn = document.getElementById('validate-repo-btn');
+    const validationResult = document.getElementById('repo-validation-result');
+    const descriptionField = document.getElementById('id_description');
+    
+    if (validateBtn) {
+        validateBtn.addEventListener('click', function() {
+            const repoUrl = repoUrlInput.value.trim();
+            
+            if (!repoUrl) {
+                showValidationResult('Please enter a repository URL first.', 'warning');
+                return;
+            }
+            
+            validateBtn.disabled = true;
+            validateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validating...';
+            
+            fetch('{% url "github_validate_repo" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({repo_url: repoUrl})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.valid && data.accessible) {
+                    showValidationResult('✓ Repository found and accessible!', 'success');
+                    
+                    // Auto-fill description if empty and repo has description
+                    if (data.repo_info && data.repo_info.description && !descriptionField.value.trim()) {
+                        descriptionField.value = data.repo_info.description;
+                        showValidationResult('✓ Repository found! Description auto-filled.', 'success');
+                    }
+                } else if (data.valid && !data.accessible) {
+                    showValidationResult('⚠ Valid URL format, but repository not accessible: ' + (data.error || 'Unknown error'), 'warning');
+                } else {
+                    showValidationResult('✗ Invalid repository URL: ' + (data.error || 'Unknown error'), 'danger');
+                }
+            })
+            .catch(error => {
+                showValidationResult('✗ Error validating repository: ' + error.message, 'danger');
+            })
+            .finally(() => {
+                validateBtn.disabled = false;
+                validateBtn.innerHTML = '<i class="fas fa-check"></i> Validate';
+            });
+        });
+    }
+    
+    function showValidationResult(message, type) {
+        validationResult.innerHTML = `<div class="alert alert-${type} mt-2">${message}</div>`;
+        setTimeout(() => {
+            validationResult.innerHTML = '';
+        }, 5000);
+    }
+});
+</script>
 {% endblock %}

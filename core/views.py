@@ -579,49 +579,37 @@ def dashboard_view(request):
 @login_required
 @require_project_management_permission
 def project_create_view(request, manageable_teams=None):
-    if request.method == 'POST':
-        team_id = request.POST.get('team')
-        
-        if team_id:
-            # User selected a specific team
-            team = get_object_or_404(Team, id=team_id)
-            
-            # Verify user can manage projects in this team
-            if not TeamPermissions.can_manage_projects(request.user, team):
-                messages.error(request, 'You do not have permission to create projects in this team.')
-                return redirect('dashboard')
-        else:
-            # Get or create a team for the user if they don't have one
-            team, created = Team.objects.get_or_create(
-                owner=request.user,
-                defaults={'name': f"{request.user.username}'s Team"}
-            )
-            
-            # Create membership if it doesn't exist
-            Membership.objects.get_or_create(
-                user=request.user,
-                team=team,
-                defaults={'role': 'Admin'}
-            )
-        
-        project = Project.objects.create(
-            name=request.POST['name'],
-            description=request.POST['description'],
-            repo_url=request.POST.get('repo_url', ''),
-            team=team
-        )
-        
-        messages.success(request, f'Project "{project.name}" created successfully!')
-        return redirect('project_detail', project.id)
+    from .forms import ProjectForm
+    from .github_service import get_github_service
     
-    # Get teams where user can manage projects (provided by decorator)
-    teams_with_permissions = [
-        team_info['team'] for team_info in manageable_teams
-    ]
+    if request.method == 'POST':
+        form = ProjectForm(request.POST, user=request.user)
+        
+        if form.is_valid():
+            project = form.save()
+            
+            # Try to sync with GitHub if repository URL is provided
+            if project.repo_url:
+                service = get_github_service()
+                if service.is_configured():
+                    sync_result = service.sync_project_repository(project)
+                    if sync_result['success'] and sync_result['updated_fields']:
+                        messages.info(request, f'Project synced with GitHub. Updated: {", ".join(sync_result["updated_fields"])}')
+                    elif sync_result['error']:
+                        messages.warning(request, f'Project created but GitHub sync failed: {sync_result["error"]}')
+            
+            messages.success(request, f'Project "{project.name}" created successfully!')
+            return redirect('project_detail', project.id)
+    else:
+        form = ProjectForm(user=request.user)
+    
+    # Check if GitHub is configured
+    github_configured = get_github_service().is_configured()
     
     return render(request, 'project_create.html', {
-        'teams': teams_with_permissions,
-        'manageable_teams': manageable_teams
+        'form': form,
+        'manageable_teams': manageable_teams,
+        'github_configured': github_configured
     })
 
 @login_required
@@ -660,34 +648,45 @@ def project_detail_view(request, project_id, project=None):
 @login_required
 @require_project_access
 def pr_create_view(request, project_id, project=None):
-    # project is provided by the decorator
+    from .forms import PullRequestForm
+    from .github_service import get_github_service
     
     if request.method == 'POST':
-        pr = PullRequest.objects.create(
-            project=project,
-            number=request.POST['number'],
-            title=request.POST['title'],
-            description=request.POST['description'],
-            author=request.POST['author'],
-            diff_url=request.POST['diff_url'],
-            status='open'
-        )
+        form = PullRequestForm(request.POST, project=project)
         
-        # Trigger AI summary generation if requested
-        if request.POST.get('generate_ai_summary'):
-            hooks.handle_new_pr(
-                project_id=project.id,
-                pr_number=pr.number,
-                diff_url=pr.diff_url,
-                title=pr.title,
-                description=pr.description,
-                author=pr.author
-            )
-        
-        messages.success(request, f'Pull Request #{pr.number} created successfully!')
-        return redirect('pr_detail', pr.id)
+        if form.is_valid():
+            pr = form.save(commit=False)
+            pr.project = project
+            pr.save()
+            
+            # Trigger AI summary generation if requested
+            if request.POST.get('generate_ai_summary'):
+                hooks.handle_new_pr(
+                    project_id=project.id,
+                    pr_number=pr.number,
+                    diff_url=pr.diff_url,
+                    title=pr.title,
+                    description=pr.description,
+                    author=pr.author
+                )
+            
+            messages.success(request, f'Pull Request #{pr.number} created successfully!')
+            return redirect('pr_detail', pr.id)
+    else:
+        form = PullRequestForm(project=project)
+        # Pre-fill author with current user
+        form.fields['author'].initial = request.user.username
     
-    return render(request, 'pr_create.html', {'project': project})
+    # Check if GitHub is configured and project has repo URL
+    github_configured = get_github_service().is_configured()
+    can_fetch_from_github = github_configured and project.repo_url
+    
+    return render(request, 'pr_create.html', {
+        'project': project,
+        'form': form,
+        'github_configured': github_configured,
+        'can_fetch_from_github': can_fetch_from_github
+    })
 
 @login_required
 @require_pr_access
@@ -1103,3 +1102,202 @@ def team_detail_view(request, team_id, team=None):
         'stats': stats,
         'user_permissions': user_permissions,
     })
+
+
+@login_required
+@require_project_access
+def project_github_sync_view(request, project_id, project=None):
+    """Sync project with GitHub repository."""
+    from .forms import GitHubSyncForm
+    from .github_service import get_github_service
+    
+    if not project.repo_url:
+        messages.error(request, 'This project does not have a GitHub repository URL configured.')
+        return redirect('project_detail', project.id)
+    
+    service = get_github_service()
+    if not service.is_configured():
+        messages.error(request, 'GitHub API is not configured. Please contact an administrator.')
+        return redirect('project_detail', project.id)
+    
+    if request.method == 'POST':
+        form = GitHubSyncForm(request.POST)
+        
+        if form.is_valid():
+            sync_results = []
+            
+            # Sync project repository info
+            if form.cleaned_data['sync_description']:
+                sync_result = service.sync_project_repository(project)
+                if sync_result['success']:
+                    if sync_result['updated_fields']:
+                        sync_results.append(f"Updated project: {', '.join(sync_result['updated_fields'])}")
+                    else:
+                        sync_results.append("Project is already up to date")
+                else:
+                    messages.error(request, f'Failed to sync project: {sync_result["error"]}')
+            
+            # Import pull requests
+            if form.cleaned_data['import_pull_requests']:
+                pr_limit = form.cleaned_data['pr_limit'] or 10
+                pr_state = form.cleaned_data['pr_state'] or 'all'
+                
+                prs_result = service.get_repository_pull_requests(
+                    project.repo_url, 
+                    state=pr_state, 
+                    limit=pr_limit
+                )
+                
+                if prs_result['success']:
+                    imported_count = 0
+                    skipped_count = 0
+                    
+                    for pr_data in prs_result['pull_requests']:
+                        # Check if PR already exists
+                        existing_pr = PullRequest.objects.filter(
+                            project=project,
+                            number=pr_data['number']
+                        ).first()
+                        
+                        if not existing_pr:
+                            # Create new PR
+                            PullRequest.objects.create(
+                                project=project,
+                                number=pr_data['number'],
+                                title=pr_data['title'],
+                                description='',  # We'll fetch full description separately if needed
+                                author=pr_data['author'],
+                                status='merged' if pr_data['merged'] else ('closed' if pr_data['state'] == 'closed' else 'open'),
+                                diff_url=pr_data['html_url']
+                            )
+                            imported_count += 1
+                        else:
+                            skipped_count += 1
+                    
+                    sync_results.append(f"Imported {imported_count} pull requests, skipped {skipped_count} existing")
+                else:
+                    messages.error(request, f'Failed to import pull requests: {prs_result["error"]}')
+            
+            if sync_results:
+                messages.success(request, 'GitHub sync completed: ' + '; '.join(sync_results))
+            
+            return redirect('project_detail', project.id)
+    else:
+        form = GitHubSyncForm()
+    
+    # Get repository info for display
+    repo_validation = service.validate_repository_url(project.repo_url)
+    
+    return render(request, 'project_github_sync.html', {
+        'project': project,
+        'form': form,
+        'repo_info': repo_validation.get('repo_info'),
+        'repo_accessible': repo_validation.get('accessible', False)
+    })
+
+
+@api_view(['POST'])
+def github_validate_repo(request):
+    """API endpoint to validate GitHub repository URL."""
+    from .github_service import get_github_service
+    
+    repo_url = request.data.get('repo_url')
+    if not repo_url:
+        return Response({'error': 'Repository URL is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    service = get_github_service()
+    result = service.validate_repository_url(repo_url)
+    
+    return Response({
+        'valid': result['valid'],
+        'accessible': result['accessible'],
+        'error': result['error'],
+        'repo_info': result['repo_info']
+    })
+
+
+@api_view(['POST'])
+def github_fetch_pr(request):
+    """API endpoint to fetch pull request info from GitHub."""
+    from .github_service import get_github_service
+    
+    repo_url = request.data.get('repo_url')
+    pr_number = request.data.get('pr_number')
+    
+    if not repo_url or not pr_number:
+        return Response(
+            {'error': 'Repository URL and PR number are required'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        pr_number = int(pr_number)
+    except (ValueError, TypeError):
+        return Response(
+            {'error': 'PR number must be a valid integer'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    service = get_github_service()
+    result = service.get_pull_request_info(repo_url, pr_number)
+    
+    if result['found']:
+        return Response({
+            'found': True,
+            'pr_info': result['pr_info']
+        })
+    else:
+        return Response({
+            'found': False,
+            'error': result['error']
+        }, status=status.HTTP_404_NOT_FOUND if 'not found' in result['error'].lower() else status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def github_import_pr(request):
+    """API endpoint to import a pull request from GitHub."""
+    from .github_service import get_github_service
+    
+    project_id = request.data.get('project_id')
+    pr_number = request.data.get('pr_number')
+    
+    if not project_id or not pr_number:
+        return Response(
+            {'error': 'Project ID and PR number are required'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        project = Project.objects.get(id=project_id)
+        
+        # Check if user has access to this project
+        if not TeamPermissions.is_team_member(request.user, project.team):
+            return Response(
+                {'error': 'You do not have access to this project'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        pr_number = int(pr_number)
+    except Project.DoesNotExist:
+        return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+    except (ValueError, TypeError):
+        return Response(
+            {'error': 'PR number must be a valid integer'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    service = get_github_service()
+    pr_instance, error_msg = service.create_pull_request_from_github(project, pr_number)
+    
+    if pr_instance:
+        return Response({
+            'success': True,
+            'message': error_msg,
+            'pr_id': pr_instance.id,
+            'pr_url': f'/projects/{project.id}/prs/{pr_instance.id}/'
+        })
+    else:
+        return Response({
+            'success': False,
+            'error': error_msg
+        }, status=status.HTTP_400_BAD_REQUEST)

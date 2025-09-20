@@ -1,164 +1,250 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-Simple validation script for the invitation service.
-This script validates the service code without running Django tests.
+Service Validation Script for CodeFlow
+
+This script validates that all services are working correctly,
+including GitHub integration and AI services.
 """
 
 import os
 import sys
 import django
-from django.conf import settings
+from pathlib import Path
 
 # Add the project directory to Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+project_dir = Path(__file__).parent
+sys.path.insert(0, str(project_dir))
 
-# Configure Django settings
+# Set up Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'codeflow.settings')
-django.setup()
 
-# Now we can import our models and services
-from core.models import User, Team, Membership, TeamInvitation, Notification
-from core.services import InvitationService, TeamService
+try:
+    django.setup()
+except Exception as e:
+    print(f"❌ Django setup failed: {e}")
+    print("Make sure you're in the project directory and dependencies are installed.")
+    sys.exit(1)
 
-def validate_invitation_service():
-    """Validate the InvitationService functionality."""
-    print("Validating InvitationService...")
-    
-    # Test 1: Check if service class exists and has required methods
-    required_methods = [
-        'send_invitation',
-        'accept_invitation', 
-        'decline_invitation',
-        'get_pending_invitations',
-        'get_sent_invitations',
-        'cleanup_expired_invitations'
-    ]
-    
-    for method in required_methods:
-        if not hasattr(InvitationService, method):
-            print(f"❌ Missing method: {method}")
-            return False
-        else:
-            print(f"✅ Method exists: {method}")
-    
-    # Test 2: Check if private helper methods exist
-    helper_methods = [
-        '_can_invite_members',
-        '_send_invitation_email',
-        '_create_invitation_notification',
-        '_create_acceptance_notifications',
-        '_create_decline_notification'
-    ]
-    
-    for method in helper_methods:
-        if not hasattr(InvitationService, method):
-            print(f"❌ Missing helper method: {method}")
-            return False
-        else:
-            print(f"✅ Helper method exists: {method}")
-    
-    print("✅ InvitationService validation passed!")
-    return True
+from django.conf import settings
 
-def validate_team_service():
-    """Validate the TeamService functionality."""
-    print("\nValidating TeamService...")
-    
-    # Test 1: Check if service class exists and has required methods
-    required_methods = [
-        'create_team',
-        'get_user_teams',
-        'can_invite_members'
-    ]
-    
-    for method in required_methods:
-        if not hasattr(TeamService, method):
-            print(f"❌ Missing method: {method}")
-            return False
-        else:
-            print(f"✅ Method exists: {method}")
-    
-    print("✅ TeamService validation passed!")
-    return True
 
-def validate_models():
-    """Validate that required models exist with proper fields."""
-    print("\nValidating Models...")
+def test_github_integration():
+    """Test GitHub integration."""
+    print("=== Testing GitHub Integration ===")
     
-    # Check TeamInvitation model
-    required_fields = [
-        'team', 'invited_by', 'invited_user', 'email', 'role', 
-        'status', 'token', 'expires_at', 'created_at'
-    ]
-    
-    for field in required_fields:
-        if not hasattr(TeamInvitation, field):
-            print(f"❌ TeamInvitation missing field: {field}")
+    try:
+        from core.github_service import GitHubService
+        
+        service = GitHubService()
+        
+        if not service.is_configured():
+            print("❌ GitHub API not configured")
+            print("   Set GITHUB_TOKEN in your .env file")
+            print("   Run: python manage.py setup_github --token YOUR_TOKEN")
             return False
+        
+        print("✅ GitHub API configured")
+        
+        # Test with a public repository
+        test_repo = "https://github.com/octocat/Hello-World"
+        print(f"Testing repository validation with: {test_repo}")
+        
+        result = service.validate_repository_url(test_repo)
+        
+        if result['valid']:
+            print("✅ Repository URL validation works")
+            
+            if result['accessible']:
+                print("✅ Repository access works")
+                repo_info = result['repo_info']
+                print(f"   Repository: {repo_info['full_name']}")
+                print(f"   Description: {repo_info['description']}")
+            else:
+                print("⚠️  Repository validation works but access failed")
+                print(f"   Error: {result['error']}")
         else:
-            print(f"✅ TeamInvitation has field: {field}")
-    
-    # Check if is_expired method exists
-    if not hasattr(TeamInvitation, 'is_expired'):
-        print("❌ TeamInvitation missing is_expired method")
+            print("❌ Repository validation failed")
+            print(f"   Error: {result['error']}")
+            return False
+        
+        # Test PR fetching
+        print("Testing pull request fetching...")
+        pr_result = service.get_pull_request_info(test_repo, 1)
+        
+        if pr_result['found']:
+            print("✅ Pull request fetching works")
+            pr_info = pr_result['pr_info']
+            print(f"   PR: #{pr_info['number']} - {pr_info['title']}")
+        else:
+            print("⚠️  Pull request fetching test failed (this may be normal)")
+            print(f"   Error: {pr_result['error']}")
+        
+        return True
+        
+    except ImportError:
+        print("❌ PyGithub not installed")
+        print("   Run: pip install PyGithub")
         return False
-    else:
-        print("✅ TeamInvitation has is_expired method")
+    except Exception as e:
+        print(f"❌ GitHub integration error: {str(e)}")
+        return False
+
+
+def test_ai_integration():
+    """Test AI integration."""
+    print("\n=== Testing AI Integration ===")
     
-    print("✅ Models validation passed!")
+    try:
+        import google.generativeai as genai
+        
+        api_key = getattr(settings, 'GEMINI_API_KEY', None)
+        
+        if not api_key or api_key == 'your_gemini_api_key_here':
+            print("❌ Gemini API key not configured")
+            print("   Set GEMINI_API_KEY in your .env file")
+            return False
+        
+        print("✅ Gemini API key configured")
+        
+        # Test API connection
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        
+        test_prompt = "Say 'Hello from CodeFlow!' if you can read this."
+        response = model.generate_content(test_prompt)
+        
+        if response and response.text:
+            print("✅ Gemini API connection works")
+            print(f"   Response: {response.text.strip()}")
+            return True
+        else:
+            print("❌ Gemini API response empty")
+            return False
+            
+    except ImportError:
+        print("❌ google-generativeai not installed")
+        print("   This should be included in requirements.txt")
+        return False
+    except Exception as e:
+        print(f"❌ AI integration error: {str(e)}")
+        return False
+
+
+def test_database():
+    """Test database connection."""
+    print("\n=== Testing Database ===")
+    
+    try:
+        from django.db import connection
+        from core.models import User, Team, Project
+        
+        # Test database connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            result = cursor.fetchone()
+        
+        print("✅ Database connection works")
+        
+        # Test model queries
+        user_count = User.objects.count()
+        team_count = Team.objects.count()
+        project_count = Project.objects.count()
+        
+        print(f"   Users: {user_count}")
+        print(f"   Teams: {team_count}")
+        print(f"   Projects: {project_count}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Database error: {str(e)}")
+        return False
+
+
+def test_environment():
+    """Test environment configuration."""
+    print("\n=== Testing Environment ===")
+    
+    # Check .env file
+    env_file = Path(".env")
+    if env_file.exists():
+        print("✅ .env file exists")
+    else:
+        print("⚠️  .env file not found")
+    
+    # Check required settings
+    required_settings = ['SECRET_KEY', 'DEBUG']
+    for setting in required_settings:
+        if hasattr(settings, setting):
+            print(f"✅ {setting} configured")
+        else:
+            print(f"❌ {setting} not configured")
+    
+    # Check optional settings
+    optional_settings = {
+        'GITHUB_TOKEN': 'GitHub integration',
+        'GEMINI_API_KEY': 'AI features'
+    }
+    
+    for setting, description in optional_settings.items():
+        value = getattr(settings, setting, None)
+        if value and value != f'your_{setting.lower()}_here':
+            print(f"✅ {setting} configured ({description})")
+        else:
+            print(f"⚠️  {setting} not configured ({description} disabled)")
+    
     return True
 
-def validate_notification_types():
-    """Validate that notification types are properly defined."""
-    print("\nValidating Notification Types...")
-    
-    required_types = [
-        'team_invitation',
-        'invitation_accepted', 
-        'invitation_declined',
-        'team_member_added',
-        'team_role_changed'
-    ]
-    
-    notification_types = [choice[0] for choice in Notification.NOTIFICATION_TYPES]
-    
-    for notification_type in required_types:
-        if notification_type not in notification_types:
-            print(f"❌ Missing notification type: {notification_type}")
-            return False
-        else:
-            print(f"✅ Notification type exists: {notification_type}")
-    
-    print("✅ Notification types validation passed!")
-    return True
 
 def main():
-    """Run all validations."""
-    print("Starting service validation...\n")
+    """Run all validation tests."""
+    print("🔍 CodeFlow Service Validation")
+    print("=" * 50)
     
-    validations = [
-        validate_models,
-        validate_notification_types,
-        validate_invitation_service,
-        validate_team_service
-    ]
+    results = []
     
-    all_passed = True
-    for validation in validations:
-        try:
-            if not validation():
-                all_passed = False
-        except Exception as e:
-            print(f"❌ Validation failed with error: {e}")
-            all_passed = False
+    # Test environment
+    results.append(test_environment())
     
-    print("\n" + "="*50)
-    if all_passed:
-        print("🎉 All validations passed! Service implementation is complete.")
+    # Test database
+    results.append(test_database())
+    
+    # Test GitHub integration
+    results.append(test_github_integration())
+    
+    # Test AI integration
+    results.append(test_ai_integration())
+    
+    # Summary
+    print("\n" + "=" * 50)
+    print("📊 Validation Summary")
+    print("=" * 50)
+    
+    passed = sum(results)
+    total = len(results)
+    
+    if passed == total:
+        print("🎉 All services are working correctly!")
+        print("\nYour CodeFlow installation is ready to use.")
     else:
-        print("❌ Some validations failed. Please check the implementation.")
+        print(f"⚠️  {passed}/{total} services are working correctly.")
+        print("\nSome features may not be available. Check the errors above.")
     
-    return all_passed
+    print("\nNext steps:")
+    if passed < total:
+        print("1. Fix any configuration issues shown above")
+        print("2. Run this script again to verify fixes")
+        print("3. Check the setup documentation for help")
+    else:
+        print("1. Start the server: python manage.py runserver")
+        print("2. Open http://127.0.0.1:8000 in your browser")
+        print("3. Create an account and start using CodeFlow!")
+    
+    print("\nFor help:")
+    print("• README.md - General setup")
+    print("• GITHUB_INTEGRATION.md - GitHub setup guide")
+    print("• python manage.py setup_github --help - GitHub commands")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

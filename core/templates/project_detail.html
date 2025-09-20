@@ -10,6 +10,11 @@
         <small class="text-muted">Team: {{ project.team.name }} • Created {{ project.created_at|date:"M d, Y" }}</small>
     </div>
     <div>
+        {% if project.repo_url %}
+            <a href="{% url 'project_github_sync' project.id %}" class="btn btn-outline-secondary me-2">
+                <i class="fab fa-github"></i> GitHub Sync
+            </a>
+        {% endif %}
         <a href="{% url 'pr_create' project.id %}" class="btn btn-primary">
             <i class="fas fa-code-branch"></i> New Pull Request
         </a>
