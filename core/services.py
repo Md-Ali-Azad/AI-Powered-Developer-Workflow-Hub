@@ -89,7 +89,7 @@ class InvitationService:
             
             # Create in-app notification if user exists
             if user:
-                InvitationService._create_invitation_notification(invitation, user)
+                NotificationService.create_team_invitation_notification(invitation, user)
             
             logger.info(f"Invitation sent to {email} for team {team.name} by {inviter.username}")
             return invitation
@@ -146,7 +146,18 @@ class InvitationService:
             invitation.save()
             
             # Create notifications
-            InvitationService._create_acceptance_notifications(invitation, user)
+            NotificationService.create_invitation_accepted_notification(invitation, user)
+            
+            # Notify team admins (excluding the inviter)
+            admin_members = Membership.objects.filter(
+                team=invitation.team,
+                role='Admin'
+            ).exclude(user=invitation.invited_by).select_related('user')
+            
+            for membership in admin_members:
+                NotificationService.create_team_member_added_notification(
+                    invitation.team, user, invitation.role, invitation.invited_by, membership.user
+                )
             
             logger.info(f"User {user.username} accepted invitation to team {invitation.team.name}")
             return membership
@@ -192,7 +203,7 @@ class InvitationService:
             invitation.save()
             
             # Create notification for inviter
-            InvitationService._create_decline_notification(invitation)
+            NotificationService.create_invitation_declined_notification(invitation)
             
             logger.info(f"Invitation to {invitation.email} for team {invitation.team.name} was declined")
             return True
@@ -298,102 +309,7 @@ The CodeFlow Team
             logger.error(f"Failed to send invitation email to {invitation.email}: {str(e)}")
             # Don't raise the exception to avoid breaking the invitation creation
     
-    @staticmethod
-    def _create_invitation_notification(invitation, user):
-        """
-        Create in-app notification for team invitation.
-        
-        Args:
-            invitation: TeamInvitation instance
-            user: User instance to notify
-        """
-        try:
-            Notification.objects.create(
-                user=user,
-                type='team_invitation',
-                payload={
-                    'team_id': invitation.team.id,
-                    'team_name': invitation.team.name,
-                    'invited_by': invitation.invited_by.username,
-                    'invited_by_name': invitation.invited_by.get_full_name() or invitation.invited_by.username,
-                    'role': invitation.role,
-                    'invitation_token': str(invitation.token),
-                    'expires_at': invitation.expires_at.isoformat()
-                }
-            )
-            logger.info(f"Created invitation notification for user {user.username}")
-        except Exception as e:
-            logger.error(f"Failed to create invitation notification: {str(e)}")
-    
-    @staticmethod
-    def _create_acceptance_notifications(invitation, user):
-        """
-        Create notifications when an invitation is accepted.
-        
-        Args:
-            invitation: TeamInvitation instance
-            user: User who accepted the invitation
-        """
-        try:
-            # Notify the inviter
-            Notification.objects.create(
-                user=invitation.invited_by,
-                type='invitation_accepted',
-                payload={
-                    'team_id': invitation.team.id,
-                    'team_name': invitation.team.name,
-                    'accepted_by': user.username,
-                    'accepted_by_name': user.get_full_name() or user.username,
-                    'role': invitation.role
-                }
-            )
-            
-            # Notify team admins (excluding the inviter)
-            admin_members = Membership.objects.filter(
-                team=invitation.team,
-                role='Admin'
-            ).exclude(user=invitation.invited_by).select_related('user')
-            
-            for membership in admin_members:
-                Notification.objects.create(
-                    user=membership.user,
-                    type='team_member_added',
-                    payload={
-                        'team_id': invitation.team.id,
-                        'team_name': invitation.team.name,
-                        'new_member': user.username,
-                        'new_member_name': user.get_full_name() or user.username,
-                        'role': invitation.role,
-                        'invited_by': invitation.invited_by.username
-                    }
-                )
-            
-            logger.info(f"Created acceptance notifications for invitation to {invitation.email}")
-        except Exception as e:
-            logger.error(f"Failed to create acceptance notifications: {str(e)}")
-    
-    @staticmethod
-    def _create_decline_notification(invitation):
-        """
-        Create notification when an invitation is declined.
-        
-        Args:
-            invitation: TeamInvitation instance
-        """
-        try:
-            Notification.objects.create(
-                user=invitation.invited_by,
-                type='invitation_declined',
-                payload={
-                    'team_id': invitation.team.id,
-                    'team_name': invitation.team.name,
-                    'declined_by_email': invitation.email,
-                    'role': invitation.role
-                }
-            )
-            logger.info(f"Created decline notification for invitation to {invitation.email}")
-        except Exception as e:
-            logger.error(f"Failed to create decline notification: {str(e)}")
+
 
 
 class TeamPermissions:
@@ -836,6 +752,149 @@ def get_user_accessible_teams(user):
         })
     
     return teams_info
+
+
+class NotificationService:
+    """Service class for managing notifications."""
+    
+    @staticmethod
+    def create_team_invitation_notification(invitation, user):
+        """
+        Create notification for team invitation.
+        
+        Args:
+            invitation: TeamInvitation instance
+            user: User to notify
+        """
+        return Notification.objects.create(
+            user=user,
+            type='team_invitation',
+            payload={
+                'team_id': invitation.team.id,
+                'team_name': invitation.team.name,
+                'invited_by': invitation.invited_by.username,
+                'invited_by_name': invitation.invited_by.get_full_name() or invitation.invited_by.username,
+                'role': invitation.role,
+                'invitation_token': str(invitation.token),
+                'expires_at': invitation.expires_at.isoformat()
+            }
+        )
+    
+    @staticmethod
+    def create_invitation_accepted_notification(invitation, accepting_user):
+        """
+        Create notification when invitation is accepted.
+        
+        Args:
+            invitation: TeamInvitation instance
+            accepting_user: User who accepted the invitation
+        """
+        return Notification.objects.create(
+            user=invitation.invited_by,
+            type='invitation_accepted',
+            payload={
+                'team_id': invitation.team.id,
+                'team_name': invitation.team.name,
+                'accepted_by': accepting_user.username,
+                'accepted_by_name': accepting_user.get_full_name() or accepting_user.username,
+                'role': invitation.role
+            }
+        )
+    
+    @staticmethod
+    def create_invitation_declined_notification(invitation):
+        """
+        Create notification when invitation is declined.
+        
+        Args:
+            invitation: TeamInvitation instance
+        """
+        return Notification.objects.create(
+            user=invitation.invited_by,
+            type='invitation_declined',
+            payload={
+                'team_id': invitation.team.id,
+                'team_name': invitation.team.name,
+                'declined_by_email': invitation.email,
+                'role': invitation.role
+            }
+        )
+    
+    @staticmethod
+    def create_team_member_added_notification(team, new_member, role, invited_by, notify_user):
+        """
+        Create notification when new member is added to team.
+        
+        Args:
+            team: Team instance
+            new_member: User who was added
+            role: Role assigned to new member
+            invited_by: User who sent the invitation
+            notify_user: User to notify
+        """
+        return Notification.objects.create(
+            user=notify_user,
+            type='team_member_added',
+            payload={
+                'team_id': team.id,
+                'team_name': team.name,
+                'new_member': new_member.username,
+                'new_member_name': new_member.get_full_name() or new_member.username,
+                'role': role,
+                'invited_by': invited_by.username
+            }
+        )
+    
+    @staticmethod
+    def get_unread_notifications_count(user):
+        """
+        Get count of unread notifications for user.
+        
+        Args:
+            user: User instance
+            
+        Returns:
+            Integer count of unread notifications
+        """
+        return Notification.objects.filter(user=user, read_at__isnull=True).count()
+    
+    @staticmethod
+    def mark_notification_read(notification_id, user):
+        """
+        Mark a notification as read.
+        
+        Args:
+            notification_id: ID of notification to mark as read
+            user: User who owns the notification
+            
+        Returns:
+            Boolean indicating success
+        """
+        try:
+            notification = Notification.objects.get(id=notification_id, user=user)
+            from django.utils import timezone
+            notification.read_at = timezone.now()
+            notification.save()
+            return True
+        except Notification.DoesNotExist:
+            return False
+    
+    @staticmethod
+    def mark_all_notifications_read(user):
+        """
+        Mark all notifications as read for a user.
+        
+        Args:
+            user: User instance
+            
+        Returns:
+            Number of notifications marked as read
+        """
+        from django.utils import timezone
+        return Notification.objects.filter(
+            user=user, 
+            read_at__isnull=True
+        ).update(read_at=timezone.now())
 
 
 def validate_team_action(user, team, action):

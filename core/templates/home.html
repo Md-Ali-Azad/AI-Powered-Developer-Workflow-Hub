@@ -1,0 +1,352 @@
+{% extends 'base.html' %}
+
+{% block title %}CodeFlow - AI-Powered Developer Workflow Hub{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section py-5 mb-5">
+    <div class="row align-items-center min-vh-75">
+        <div class="col-lg-6">
+            <div class="hero-content">
+                <h1 class="display-4 fw-bold mb-4">
+                    Supercharge Your 
+                    <span class="text-gradient">Development Workflow</span> 
+                    with AI
+                </h1>
+                <p class="lead text-muted mb-4">
+                    CodeFlow combines team collaboration, project management, and AI-powered insights 
+                    to streamline your development process. From pull request analysis to automated 
+                    documentation, we've got you covered.
+                </p>
+                <div class="d-flex flex-wrap gap-3 mb-4">
+                    <a href="{% url 'register' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-rocket me-2"></i> Get Started Free
+                    </a>
+                    <a href="#features" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-play me-2"></i> Watch Demo
+                    </a>
+                </div>
+                <div class="d-flex align-items-center text-muted">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <span>Free forever • No credit card required • 2-minute setup</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="hero-image text-center">
+                <div class="position-relative">
+                    <div class="card shadow-lg border-0" style="transform: rotate(-5deg);">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar-circle me-3">AI</div>
+                                <div>
+                                    <h6 class="mb-0">AI Assistant</h6>
+                                    <small class="text-muted">Pull Request Analysis</small>
+                                </div>
+                            </div>
+                            <div class="bg-light p-3 rounded">
+                                <p class="mb-2"><strong>Risk Assessment:</strong> <span class="badge bg-warning">Medium</span></p>
+                                <p class="mb-2"><strong>Code Quality:</strong> 8.5/10</p>
+                                <p class="mb-0"><strong>Suggestions:</strong> 3 improvements found</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card shadow-lg border-0 position-absolute" style="top: 50px; right: -20px; transform: rotate(5deg); z-index: -1;">
+                        <div class="card-body p-4">
+                            <h6 class="mb-3"><i class="fas fa-chart-line text-primary me-2"></i>Team Dashboard</h6>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <h4 class="text-primary mb-0">24</h4>
+                                    <small class="text-muted">Active PRs</small>
+                                </div>
+                                <div class="col-6">
+                                    <h4 class="text-success mb-0">89%</h4>
+                                    <small class="text-muted">Success Rate</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section id="features" class="py-5 mb-5">
+    <div class="text-center mb-5">
+        <h2 class="display-5 fw-bold mb-3">Everything You Need to Ship Faster</h2>
+        <p class="lead text-muted">Powerful features designed for modern development teams</p>
+    </div>
+    
+    <div class="row g-4">
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-brain fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="fw-semibold mb-3">AI-Powered Analysis</h5>
+                    <p class="text-muted">
+                        Get intelligent insights on pull requests, code quality, and potential risks. 
+                        Our AI analyzes your code and provides actionable recommendations.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-users fa-3x text-success"></i>
+                    </div>
+                    <h5 class="fw-semibold mb-3">Team Collaboration</h5>
+                    <p class="text-muted">
+                        Seamlessly manage teams, assign roles, and track progress. 
+                        Invite members, set permissions, and collaborate effectively.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-project-diagram fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="fw-semibold mb-3">Project Management</h5>
+                    <p class="text-muted">
+                        Organize projects, track tasks, and monitor deadlines. 
+                        Keep your development workflow organized and efficient.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fab fa-github fa-3x text-dark"></i>
+                    </div>
+                    <h5 class="fw-semibold mb-3">GitHub Integration</h5>
+                    <p class="text-muted">
+                        Connect your repositories, track pull requests, and monitor commits. 
+                        Seamless integration with your existing GitHub workflow.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-bell fa-3x text-info"></i>
+                    </div>
+                    <h5 class="fw-semibold mb-3">Smart Notifications</h5>
+                    <p class="text-muted">
+                        Stay updated with intelligent notifications about PRs, builds, and team activities. 
+                        Never miss important updates again.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-chart-bar fa-3x text-danger"></i>
+                    </div>
+                    <h5 class="fw-semibold mb-3">Analytics & Reports</h5>
+                    <p class="text-muted">
+                        Get detailed insights into your team's performance, code quality trends, 
+                        and project health with comprehensive analytics.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section id="how-it-works" class="py-5 mb-5 bg-light rounded-3">
+    <div class="text-center mb-5">
+        <h2 class="display-5 fw-bold mb-3">How CodeFlow Works</h2>
+        <p class="lead text-muted">Get started in minutes, not hours</p>
+    </div>
+    
+    <div class="row g-4">
+        <div class="col-lg-4 text-center">
+            <div class="step-number mb-3">
+                <span class="badge bg-primary rounded-circle p-3 fs-4">1</span>
+            </div>
+            <h5 class="fw-semibold mb-3">Create Your Team</h5>
+            <p class="text-muted">
+                Sign up and create your development team. Invite members and assign roles 
+                based on their responsibilities.
+            </p>
+        </div>
+        
+        <div class="col-lg-4 text-center">
+            <div class="step-number mb-3">
+                <span class="badge bg-success rounded-circle p-3 fs-4">2</span>
+            </div>
+            <h5 class="fw-semibold mb-3">Connect Your Projects</h5>
+            <p class="text-muted">
+                Link your GitHub repositories and set up your projects. 
+                CodeFlow will automatically sync your development data.
+            </p>
+        </div>
+        
+        <div class="col-lg-4 text-center">
+            <div class="step-number mb-3">
+                <span class="badge bg-warning rounded-circle p-3 fs-4">3</span>
+            </div>
+            <h5 class="fw-semibold mb-3">Let AI Do the Work</h5>
+            <p class="text-muted">
+                Our AI analyzes your code, provides insights, and helps you make better decisions. 
+                Focus on coding, we'll handle the rest.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing Section -->
+<section id="pricing" class="py-5 mb-5">
+    <div class="text-center mb-5">
+        <h2 class="display-5 fw-bold mb-3">Simple, Transparent Pricing</h2>
+        <p class="lead text-muted">Start free, scale as you grow</p>
+    </div>
+    
+    <div class="row g-4 justify-content-center">
+        <div class="col-lg-4 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <h5 class="fw-semibold mb-3">Free</h5>
+                    <div class="display-4 fw-bold text-primary mb-3">$0</div>
+                    <p class="text-muted mb-4">Perfect for small teams getting started</p>
+                    <ul class="list-unstyled text-start mb-4">
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Up to 5 team members</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>3 projects</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Basic AI analysis</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>GitHub integration</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Email support</li>
+                    </ul>
+                    <a href="{% url 'register' %}" class="btn btn-outline-primary w-100">Get Started</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-md-6">
+            <div class="card border-primary shadow-lg h-100 position-relative">
+                <div class="position-absolute top-0 start-50 translate-middle">
+                    <span class="badge bg-primary px-3 py-2">Most Popular</span>
+                </div>
+                <div class="card-body text-center p-4">
+                    <h5 class="fw-semibold mb-3">Pro</h5>
+                    <div class="display-4 fw-bold text-primary mb-3">$29</div>
+                    <p class="text-muted mb-4">For growing teams that need more power</p>
+                    <ul class="list-unstyled text-start mb-4">
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Unlimited team members</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Unlimited projects</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Advanced AI analysis</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Priority support</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Custom integrations</li>
+                    </ul>
+                    <a href="{% url 'register' %}" class="btn btn-primary w-100">Start Free Trial</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <h5 class="fw-semibold mb-3">Enterprise</h5>
+                    <div class="display-4 fw-bold text-primary mb-3">Custom</div>
+                    <p class="text-muted mb-4">For large organizations with specific needs</p>
+                    <ul class="list-unstyled text-start mb-4">
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Everything in Pro</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>SSO integration</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Advanced security</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Dedicated support</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Custom deployment</li>
+                    </ul>
+                    <a href="#" class="btn btn-outline-primary w-100">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5 mb-5">
+    <div class="card bg-primary text-white border-0 shadow-lg">
+        <div class="card-body text-center p-5">
+            <h2 class="display-5 fw-bold mb-3">Ready to Transform Your Workflow?</h2>
+            <p class="lead mb-4">
+                Join thousands of developers who are already using CodeFlow to ship better code faster.
+            </p>
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                <a href="{% url 'register' %}" class="btn btn-light btn-lg">
+                    <i class="fas fa-rocket me-2"></i> Start Your Free Trial
+                </a>
+                <a href="#" class="btn btn-outline-light btn-lg">
+                    <i class="fas fa-calendar me-2"></i> Schedule Demo
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.hero-section {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+    border-radius: 1rem;
+    margin: -2rem -15px 0 -15px;
+    padding: 4rem 15px 2rem 15px;
+}
+
+.min-vh-75 {
+    min-height: 75vh;
+}
+
+.feature-icon {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.step-number .badge {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .hero-section {
+        margin: -1rem -15px 0 -15px;
+        padding: 2rem 15px 1rem 15px;
+    }
+    
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .hero-image .card {
+        transform: none !important;
+        position: static !important;
+    }
+    
+    .hero-image .position-absolute {
+        display: none;
+    }
+}
+</style>
+{% endblock %}

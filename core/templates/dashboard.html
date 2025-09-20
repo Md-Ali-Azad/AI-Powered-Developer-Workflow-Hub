@@ -1,16 +1,164 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard - AI Workflow Hub{% endblock %}
+{% block title %}Dashboard - CodeFlow{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-8">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Welcome back, {{ user.first_name|default:user.username }}!</h2>
-            <div>
-                <a href="{% url 'project_create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> New Project
-                </a>
+<!-- Welcome Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm" style="background: var(--gradient-primary); color: white;">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="fw-bold mb-2">
+                            Welcome back, {{ user.get_full_name|default:user.username }}! 👋
+                        </h2>
+                        <p class="mb-0 opacity-90">
+                            Ready to supercharge your development workflow? Let's see what's happening with your projects.
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                            <a href="{% url 'project_create' %}" class="btn btn-light">
+                                <i class="fas fa-plus me-2"></i> New Project
+                            </a>
+                            <a href="{% url 'team_create' %}" class="btn btn-outline-light">
+                                <i class="fas fa-users me-2"></i> New Team
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats Row -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-center mb-3">
+                    <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                        <i class="fas fa-project-diagram fa-2x text-primary"></i>
+                    </div>
+                </div>
+                <h3 class="fw-bold text-primary mb-1">{{ stats.total_projects }}</h3>
+                <p class="text-muted mb-0">Active Projects</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-center mb-3">
+                    <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                        <i class="fas fa-users fa-2x text-success"></i>
+                    </div>
+                </div>
+                <h3 class="fw-bold text-success mb-1">{{ stats.total_teams }}</h3>
+                <p class="text-muted mb-0">Teams</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-center mb-3">
+                    <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                        <i class="fas fa-code-branch fa-2x text-warning"></i>
+                    </div>
+                </div>
+                <h3 class="fw-bold text-warning mb-1">{{ stats.open_prs }}</h3>
+                <p class="text-muted mb-0">Open PRs</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-center mb-3">
+                    <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                        <i class="fas fa-check-circle fa-2x text-info"></i>
+                    </div>
+                </div>
+                <h3 class="fw-bold text-info mb-1">{{ stats.merged_prs }}</h3>
+                <p class="text-muted mb-0">Merged PRs</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <!-- Projects Section -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="fw-semibold mb-0">
+                        <i class="fas fa-project-diagram text-primary me-2"></i>
+                        My Projects
+                    </h5>
+                    <a href="{% url 'project_create' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus me-1"></i> New Project
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if projects %}
+                    <div class="row g-3">
+                        {% for project in projects %}
+                        <div class="col-md-6">
+                            <div class="card border border-primary border-opacity-25 h-100 hover-lift">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-start justify-content-between mb-3">
+                                        <div class="flex-grow-1">
+                                            <h6 class="fw-semibold mb-1">
+                                                <a href="{% url 'project_detail' project.id %}" class="text-decoration-none">
+                                                    {{ project.name }}
+                                                </a>
+                                            </h6>
+                                            <p class="text-muted small mb-2">{{ project.description|truncatewords:12 }}</p>
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="{% url 'project_detail' project.id %}">
+                                                    <i class="fas fa-eye me-2"></i>View Details
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="#">
+                                                    <i class="fas fa-edit me-2"></i>Edit Project
+                                                </a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-light text-dark me-2">
+                                                <i class="fas fa-users me-1"></i>{{ project.team.name }}
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">{{ project.created_at|date:"M d, Y" }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="mb-4">
+                            <i class="fas fa-project-diagram fa-4x text-muted opacity-50"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2">No projects yet</h5>
+                        <p class="text-muted mb-4">Create your first project to start organizing your development workflow!</p>
+                        <a href="{% url 'project_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create Your First Project
+                        </a>
+                    </div>
+                {% endif %}
             </div>
         </div>
 
@@ -49,124 +197,235 @@
         </div>
 
         <!-- Recent Pull Requests -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5><i class="fas fa-code-branch"></i> Recent Pull Requests</h5>
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <h5 class="fw-semibold mb-0">
+                    <i class="fas fa-code-branch text-warning me-2"></i>
+                    Recent Pull Requests
+                </h5>
             </div>
             <div class="card-body">
                 {% if recent_prs %}
-                    {% for pr in recent_prs %}
-                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                        <div>
-                            <h6 class="mb-1">
-                                <a href="{% url 'pr_detail' pr.id %}">#{{ pr.number }} {{ pr.title }}</a>
-                                {% if pr.risk_flags %}
-                                    <span class="risk-flag risk-medium">
-                                        <i class="fas fa-exclamation-triangle"></i> Risk
+                    <div class="list-group list-group-flush">
+                        {% for pr in recent_prs %}
+                        <div class="list-group-item border-0 px-0 py-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <h6 class="mb-0 me-2">
+                                            <a href="{% url 'pr_detail' pr.id %}" class="text-decoration-none">
+                                                #{{ pr.number }} {{ pr.title }}
+                                            </a>
+                                        </h6>
+                                        {% if pr.risk_flags %}
+                                            <span class="risk-flag risk-medium">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>Risk
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="d-flex align-items-center text-muted small">
+                                        <i class="fas fa-project-diagram me-1"></i>
+                                        <span class="me-3">{{ pr.project.name }}</span>
+                                        <i class="fas fa-user me-1"></i>
+                                        <span>{{ pr.author }}</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge {% if pr.status == 'open' %}bg-warning{% elif pr.status == 'merged' %}bg-success{% else %}bg-secondary{% endif %} mb-1">
+                                        {{ pr.get_status_display }}
                                     </span>
-                                {% endif %}
-                            </h6>
-                            <small class="text-muted">{{ pr.project.name }} • by {{ pr.author }}</small>
+                                    <div class="text-muted small">{{ pr.created_at|timesince }} ago</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="text-end">
-                            <span class="badge bg-{% if pr.status == 'open' %}warning{% elif pr.status == 'merged' %}success{% else %}secondary{% endif %}">
-                                {{ pr.get_status_display }}
-                            </span>
-                            <br><small class="text-muted">{{ pr.created_at|timesince }} ago</small>
-                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                 {% else %}
-                    <p class="text-muted">No recent pull requests</p>
+                    <div class="text-center py-4">
+                        <i class="fas fa-code-branch fa-3x text-muted opacity-50 mb-3"></i>
+                        <p class="text-muted mb-0">No recent pull requests</p>
+                    </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <!-- Quick Stats -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h6><i class="fas fa-chart-bar"></i> Quick Stats</h6>
-            </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-6">
-                        <h4 class="text-primary">{{ stats.total_projects }}</h4>
-                        <small>Projects</small>
-                    </div>
-                    <div class="col-6">
-                        <h4 class="text-success">{{ stats.total_prs }}</h4>
-                        <small>Pull Requests</small>
-                    </div>
-                </div>
-                <hr>
-                <div class="row text-center">
-                    <div class="col-6">
-                        <h4 class="text-warning">{{ stats.open_prs }}</h4>
-                        <small>Open PRs</small>
-                    </div>
-                    <div class="col-6">
-                        <h4 class="text-info">{{ stats.merged_prs }}</h4>
-                        <small>Merged PRs</small>
-                    </div>
+    <div class="col-lg-4">
+        <!-- My Teams -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="fw-semibold mb-0">
+                        <i class="fas fa-users text-success me-2"></i>My Teams
+                    </h6>
+                    <a href="{% url 'team_create' %}" class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-plus me-1"></i> New Team
+                    </a>
                 </div>
             </div>
-        </div>
-
-        <!-- AI Assistant -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h6><i class="fas fa-robot"></i> AI Assistant</h6>
-            </div>
             <div class="card-body">
-                <p class="small text-muted">Ask me anything about your projects!</p>
-                <div class="input-group">
-                    <input type="text" class="form-control" placeholder="Ask AI..." id="ai-input">
-                    <button class="btn btn-outline-primary" type="button" id="ai-ask">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-                <div id="ai-response" class="mt-2"></div>
-            </div>
-        </div>
-
-        <!-- Recent Activity -->
-        <div class="card">
-            <div class="card-header">
-                <h6><i class="fas fa-clock"></i> Recent Activity</h6>
-            </div>
-            <div class="card-body">
-                {% if recent_activity %}
-                    {% for activity in recent_activity %}
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-{{ activity.icon }} text-muted"></i>
+                {% if user_teams %}
+                    {% for team_data in user_teams %}
+                    <div class="d-flex align-items-center justify-content-between p-3 mb-2 bg-light rounded-3">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                <a href="{% url 'team_detail' team_data.team.id %}" class="text-decoration-none">
+                                    {{ team_data.team.name }}
+                                </a>
+                            </h6>
+                            <div class="d-flex align-items-center gap-2">
+                                {% if team_data.is_owner %}
+                                    <span class="badge bg-primary">Owner</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ team_data.role }}</span>
+                                {% endif %}
+                                <small class="text-muted">{{ team_data.team.membership_set.count }} members</small>
+                            </div>
                         </div>
-                        <div class="flex-grow-1 ms-2">
-                            <small>{{ activity.message }}</small>
-                            <br><small class="text-muted">{{ activity.created_at|timesince }} ago</small>
+                        <div class="text-end">
+                            <div class="d-flex flex-column align-items-end">
+                                {% if team_data.can_manage_projects %}
+                                    <small class="text-success"><i class="fas fa-cog me-1"></i>Manage</small>
+                                {% endif %}
+                                {% if team_data.can_invite %}
+                                    <small class="text-info"><i class="fas fa-user-plus me-1"></i>Invite</small>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
                 {% else %}
-                    <p class="text-muted small">No recent activity</p>
+                    <div class="text-center py-4">
+                        <i class="fas fa-users fa-3x text-muted opacity-50 mb-3"></i>
+                        <h6 class="fw-semibold mb-2">No teams yet</h6>
+                        <p class="text-muted small mb-3">Create a team to collaborate with others</p>
+                        <a href="{% url 'team_create' %}" class="btn btn-success">
+                            <i class="fas fa-plus me-2"></i>Create Team
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- AI Assistant -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <h6 class="fw-semibold mb-0">
+                    <i class="fas fa-robot text-primary me-2"></i>AI Assistant
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">Ask me anything about your projects and workflow!</p>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" placeholder="Ask AI..." id="ai-input">
+                    <button class="btn btn-primary" type="button" id="ai-ask">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div id="ai-response"></div>
+                
+                <!-- Quick AI Suggestions -->
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="askAI('What should I work on today?')">
+                        Today's focus
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="askAI('Show me project health')">
+                        Project health
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="askAI('Team performance summary')">
+                        Team summary
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <h6 class="fw-semibold mb-0">
+                    <i class="fas fa-clock text-info me-2"></i>Recent Activity
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if recent_activity %}
+                    <div class="timeline">
+                        {% for activity in recent_activity %}
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="flex-shrink-0 me-3">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-{{ activity.icon }} text-primary small"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <p class="mb-1 small">{{ activity.message }}</p>
+                                <small class="text-muted">{{ activity.created_at|timesince }} ago</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-clock fa-3x text-muted opacity-50 mb-3"></i>
+                        <p class="text-muted small mb-0">No recent activity</p>
+                    </div>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.hover-lift {
+    transition: all 0.3s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md) !important;
+}
+
+.timeline {
+    position: relative;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border-color);
+}
+
+.timeline .d-flex:last-child::before {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .timeline::before {
+        display: none;
+    }
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.getElementById('ai-ask').addEventListener('click', function() {
+function askAI(question) {
     const input = document.getElementById('ai-input');
     const response = document.getElementById('ai-response');
     
+    input.value = question || input.value;
+    
     if (!input.value.trim()) return;
     
-    response.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Thinking...';
+    response.innerHTML = `
+        <div class="d-flex align-items-center p-3 bg-light rounded-3">
+            <div class="loading-spinner me-2"></div>
+            <span class="text-muted small">AI is thinking...</span>
+        </div>
+    `;
     
     fetch('/ai/task_suggest/', {
         method: 'POST',
@@ -184,13 +443,43 @@ document.getElementById('ai-ask').addEventListener('click', function() {
         const formattedText = (data.suggestions || data.error)
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/`(.*?)`/g, '<code>$1</code>')
+            .replace(/`(.*?)`/g, '<code class="bg-light px-1 rounded">$1</code>')
             .replace(/\n/g, '<br>');
-        response.innerHTML = `<div class="alert alert-info small">${formattedText}</div>`;
+        
+        response.innerHTML = `
+            <div class="alert alert-primary border-0 mb-0">
+                <div class="d-flex align-items-start">
+                    <i class="fas fa-robot me-2 mt-1"></i>
+                    <div class="small">${formattedText}</div>
+                </div>
+            </div>
+        `;
         input.value = '';
     })
     .catch(error => {
-        response.innerHTML = '<div class="alert alert-danger small">Error connecting to AI</div>';
+        response.innerHTML = `
+            <div class="alert alert-danger border-0 mb-0">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <span class="small">Unable to connect to AI assistant. Please try again.</span>
+                </div>
+            </div>
+        `;
+    });
+}
+
+document.getElementById('ai-ask').addEventListener('click', () => askAI());
+
+document.getElementById('ai-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        askAI();
+    }
+});
+
+// Auto-focus AI input when clicking quick suggestions
+document.querySelectorAll('[onclick^="askAI"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        setTimeout(() => document.getElementById('ai-input').focus(), 100);
     });
 });
 </script>

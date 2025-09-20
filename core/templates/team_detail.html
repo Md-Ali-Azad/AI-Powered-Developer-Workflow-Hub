@@ -1,55 +1,125 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ team.name }} - Team Dashboard - AI Workflow Hub{% endblock %}
+{% block title %}{{ team.name }} - Team Dashboard - CodeFlow{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-8">
-        <!-- Team Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2><i class="fas fa-users"></i> {{ team.name }}</h2>
-                <p class="text-muted">
-                    Owned by {{ team.owner.get_full_name|default:team.owner.username }}
-                    • Created {{ team.created_at|date:"M d, Y" }}
-                </p>
-            </div>
-            <div>
-                {% if user_permissions.can_invite_members %}
-                    <a href="{% url 'team_invite' team.id %}" class="btn btn-primary">
-                        <i class="fas fa-user-plus"></i> Invite Members
-                    </a>
-                {% endif %}
+<!-- Team Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm" style="background: var(--gradient-primary); color: white;">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
+                                <i class="fas fa-users fa-2x"></i>
+                            </div>
+                            <div>
+                                <h2 class="fw-bold mb-1">{{ team.name }}</h2>
+                                <p class="mb-0 opacity-90">
+                                    <i class="fas fa-crown me-1"></i>
+                                    Owned by {{ team.owner.get_full_name|default:team.owner.username }}
+                                    • Created {{ team.created_at|date:"M d, Y" }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        {% if user_permissions.can_invite_members %}
+                            <a href="{% url 'team_invite' team.id %}" class="btn btn-light me-2">
+                                <i class="fas fa-user-plus me-2"></i> Invite Members
+                            </a>
+                        {% endif %}
+                        {% if user_permissions.can_manage_projects %}
+                            <a href="{% url 'project_create' %}" class="btn btn-outline-light">
+                                <i class="fas fa-plus me-2"></i> New Project
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
 
         <!-- Team Projects -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5><i class="fas fa-project-diagram"></i> Team Projects</h5>
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="fw-semibold mb-0">
+                        <i class="fas fa-project-diagram text-primary me-2"></i>
+                        Team Projects
+                    </h5>
+                    {% if user_permissions.can_manage_projects %}
+                        <a href="{% url 'project_create' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-plus me-1"></i> New Project
+                        </a>
+                    {% endif %}
+                </div>
             </div>
             <div class="card-body">
                 {% if team_projects %}
-                    <div class="row">
+                    <div class="row g-3">
                         {% for project in team_projects %}
-                        <div class="col-md-6 mb-3">
-                            <div class="card border-left-primary">
+                        <div class="col-md-6">
+                            <div class="card border border-primary border-opacity-25 h-100 hover-lift">
                                 <div class="card-body">
-                                    <h6><a href="{% url 'project_detail' project.id %}">{{ project.name }}</a></h6>
-                                    <p class="text-muted small">{{ project.description|truncatewords:15 }}</p>
-                                    <small class="text-muted">{{ project.created_at|date:"M d" }}</small>
+                                    <div class="d-flex align-items-start justify-content-between mb-3">
+                                        <div class="flex-grow-1">
+                                            <h6 class="fw-semibold mb-1">
+                                                <a href="{% url 'project_detail' project.id %}" class="text-decoration-none">
+                                                    {{ project.name }}
+                                                </a>
+                                            </h6>
+                                            <p class="text-muted small mb-2">{{ project.description|truncatewords:12 }}</p>
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="{% url 'project_detail' project.id %}">
+                                                    <i class="fas fa-eye me-2"></i>View Details
+                                                </a></li>
+                                                {% if user_permissions.can_manage_projects %}
+                                                <li><a class="dropdown-item" href="#">
+                                                    <i class="fas fa-edit me-2"></i>Edit Project
+                                                </a></li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-light text-dark">
+                                                <i class="fas fa-calendar me-1"></i>{{ project.created_at|date:"M d" }}
+                                            </span>
+                                        </div>
+                                        {% if project.repo_url %}
+                                            <a href="{{ project.repo_url }}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                                <i class="fab fa-github"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
                 {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
-                        <h5>No projects yet</h5>
-                        <p class="text-muted">Create your first team project to get started!</p>
+                    <div class="text-center py-5">
+                        <div class="mb-4">
+                            <i class="fas fa-project-diagram fa-4x text-muted opacity-50"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2">No projects yet</h5>
+                        <p class="text-muted mb-4">Create your first team project to start collaborating!</p>
                         {% if user_permissions.can_manage_projects %}
-                            <a href="{% url 'project_create' %}" class="btn btn-primary">Create Project</a>
+                            <a href="{% url 'project_create' %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Create Project
+                            </a>
                         {% endif %}
                     </div>
                 {% endif %}
@@ -57,96 +127,151 @@
         </div>
 
         <!-- Recent Pull Requests -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5><i class="fas fa-code-branch"></i> Recent Pull Requests</h5>
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <h5 class="fw-semibold mb-0">
+                    <i class="fas fa-code-branch text-warning me-2"></i>
+                    Recent Pull Requests
+                </h5>
             </div>
             <div class="card-body">
                 {% if recent_prs %}
-                    {% for pr in recent_prs %}
-                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                        <div>
-                            <h6 class="mb-1">
-                                <a href="{% url 'pr_detail' pr.id %}">#{{ pr.number }} {{ pr.title }}</a>
-                                {% if pr.risk_flags %}
-                                    <span class="risk-flag risk-medium">
-                                        <i class="fas fa-exclamation-triangle"></i> Risk
+                    <div class="list-group list-group-flush">
+                        {% for pr in recent_prs %}
+                        <div class="list-group-item border-0 px-0 py-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <h6 class="mb-0 me-2">
+                                            <a href="{% url 'pr_detail' pr.id %}" class="text-decoration-none">
+                                                #{{ pr.number }} {{ pr.title }}
+                                            </a>
+                                        </h6>
+                                        {% if pr.risk_flags %}
+                                            <span class="risk-flag risk-medium">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>Risk
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="d-flex align-items-center text-muted small">
+                                        <i class="fas fa-project-diagram me-1"></i>
+                                        <span class="me-3">{{ pr.project.name }}</span>
+                                        <i class="fas fa-user me-1"></i>
+                                        <span>{{ pr.author }}</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge {% if pr.status == 'open' %}bg-warning{% elif pr.status == 'merged' %}bg-success{% else %}bg-secondary{% endif %} mb-1">
+                                        {{ pr.get_status_display }}
                                     </span>
-                                {% endif %}
-                            </h6>
-                            <small class="text-muted">{{ pr.project.name }} • by {{ pr.author }}</small>
+                                    <div class="text-muted small">{{ pr.created_at|timesince }} ago</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="text-end">
-                            <span class="badge bg-{% if pr.status == 'open' %}warning{% elif pr.status == 'merged' %}success{% else %}secondary{% endif %}">
-                                {{ pr.get_status_display }}
-                            </span>
-                            <br><small class="text-muted">{{ pr.created_at|timesince }} ago</small>
-                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                 {% else %}
-                    <p class="text-muted">No recent pull requests</p>
+                    <div class="text-center py-4">
+                        <i class="fas fa-code-branch fa-3x text-muted opacity-50 mb-3"></i>
+                        <p class="text-muted mb-0">No recent pull requests</p>
+                    </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
+    <div class="col-lg-4">
         <!-- Team Stats -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h6><i class="fas fa-chart-bar"></i> Team Stats</h6>
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <h6 class="fw-semibold mb-0">
+                    <i class="fas fa-chart-bar text-info me-2"></i>Team Overview
+                </h6>
             </div>
             <div class="card-body">
-                <div class="row text-center">
+                <div class="row g-3 text-center">
                     <div class="col-6">
-                        <h4 class="text-primary">{{ stats.total_members }}</h4>
-                        <small>Members</small>
+                        <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                            <h4 class="text-primary fw-bold mb-1">{{ stats.total_members }}</h4>
+                            <small class="text-muted">Members</small>
+                        </div>
                     </div>
                     <div class="col-6">
-                        <h4 class="text-success">{{ stats.total_projects }}</h4>
-                        <small>Projects</small>
-                    </div>
-                </div>
-                <hr>
-                <div class="row text-center">
-                    <div class="col-6">
-                        <h4 class="text-warning">{{ stats.total_prs }}</h4>
-                        <small>Pull Requests</small>
+                        <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                            <h4 class="text-success fw-bold mb-1">{{ stats.total_projects }}</h4>
+                            <small class="text-muted">Projects</small>
+                        </div>
                     </div>
                     <div class="col-6">
-                        <h4 class="text-info">{{ stats.pending_invitations }}</h4>
-                        <small>Pending Invites</small>
+                        <div class="bg-warning bg-opacity-10 rounded-3 p-3">
+                            <h4 class="text-warning fw-bold mb-1">{{ stats.total_prs }}</h4>
+                            <small class="text-muted">Pull Requests</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-info bg-opacity-10 rounded-3 p-3">
+                            <h4 class="text-info fw-bold mb-1">{{ stats.pending_invitations }}</h4>
+                            <small class="text-muted">Pending Invites</small>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Team Members -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h6><i class="fas fa-users"></i> Team Members</h6>
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="fw-semibold mb-0">
+                        <i class="fas fa-users text-success me-2"></i>Team Members
+                    </h6>
+                    {% if user_permissions.can_invite_members %}
+                        <a href="{% url 'team_invite' team.id %}" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-user-plus me-1"></i> Invite
+                        </a>
+                    {% endif %}
+                </div>
             </div>
             <div class="card-body">
                 {% for member in team_members %}
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-circle me-2">
+                <div class="d-flex align-items-center justify-content-between p-3 mb-2 bg-light rounded-3">
+                    <div class="d-flex align-items-center flex-grow-1">
+                        <div class="avatar-circle me-3">
                             {{ member.user.first_name.0|default:member.user.username.0|upper }}
                         </div>
-                        <div>
-                            <h6 class="mb-0">{{ member.user.get_full_name|default:member.user.username }}</h6>
-                            <small class="text-muted">{{ member.user.email }}</small>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1 fw-semibold">
+                                {{ member.user.get_full_name|default:member.user.username }}
+                                {% if member.user == team.owner %}
+                                    <i class="fas fa-crown text-warning ms-1" title="Team Owner"></i>
+                                {% endif %}
+                            </h6>
+                            <div class="d-flex align-items-center">
+                                <small class="text-muted me-3">
+                                    <i class="fas fa-envelope me-1"></i>{{ member.user.email }}
+                                </small>
+                                <span class="badge {% if member.role == 'Admin' %}bg-primary{% elif member.role == 'Developer' %}bg-success{% else %}bg-info{% endif %}">
+                                    {{ member.role }}
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <div class="text-end">
-                        <span class="badge bg-{% if member.role == 'Admin' %}primary{% elif member.role == 'Developer' %}success{% else %}info{% endif %}">
-                            {{ member.role }}
-                        </span>
-                        {% if member.user == team.owner %}
-                            <br><small class="text-muted">Owner</small>
-                        {% endif %}
-                    </div>
+                    {% if user_permissions.can_manage_members and member.user != team.owner %}
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">
+                                    <i class="fas fa-edit me-2"></i>Change Role
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#">
+                                    <i class="fas fa-user-minus me-2"></i>Remove Member
+                                </a></li>
+                            </ul>
+                        </div>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -154,23 +279,40 @@
 
         <!-- Pending Invitations (Admin only) -->
         {% if user_permissions.can_invite_members and team_invitations %}
-        <div class="card">
-            <div class="card-header">
-                <h6><i class="fas fa-clock"></i> Pending Invitations</h6>
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <h6 class="fw-semibold mb-0">
+                    <i class="fas fa-clock text-warning me-2"></i>Pending Invitations
+                </h6>
             </div>
             <div class="card-body">
                 {% for invitation in team_invitations %}
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div>
-                        <h6 class="mb-0">{{ invitation.email }}</h6>
-                        <small class="text-muted">{{ invitation.role }} • {{ invitation.created_at|timesince }} ago</small>
+                <div class="d-flex align-items-center justify-content-between p-3 mb-2 border rounded-3">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1 fw-semibold">{{ invitation.email }}</h6>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-secondary me-2">{{ invitation.role }}</span>
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>{{ invitation.created_at|timesince }} ago
+                            </small>
+                        </div>
                     </div>
-                    <span class="badge bg-warning">{{ invitation.get_status_display }}</span>
+                    <div class="text-end">
+                        <span class="badge bg-warning mb-1">{{ invitation.get_status_display }}</span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-danger btn-sm" onclick="cancelInvitation('{{ invitation.token }}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="resendInvitation('{{ invitation.token }}')">
+                                <i class="fas fa-redo"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 {% endfor %}
                 <div class="text-center mt-3">
-                    <a href="{% url 'invitation_list' %}" class="btn btn-sm btn-outline-primary">
-                        View All Invitations
+                    <a href="{% url 'invitation_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-2"></i>View All Invitations
                     </a>
                 </div>
             </div>
@@ -178,4 +320,75 @@
         {% endif %}
     </div>
 </div>
+
+<style>
+.hover-lift {
+    transition: all 0.3s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md) !important;
+}
+
+.avatar-circle {
+    width: 45px;
+    height: 45px;
+    font-size: 18px;
+}
+
+@media (max-width: 768px) {
+    .avatar-circle {
+        width: 35px;
+        height: 35px;
+        font-size: 14px;
+    }
+}
+</style>
+
+<script>
+function cancelInvitation(token) {
+    if (confirm('Are you sure you want to cancel this invitation?')) {
+        fetch(`/invitations/${token}/decline/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Failed to cancel invitation');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to cancel invitation');
+        });
+    }
+}
+
+function resendInvitation(token) {
+    // This would need to be implemented in the backend
+    alert('Resend invitation functionality coming soon!');
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
 {% endblock %}

@@ -10,10 +10,13 @@ router.register(r'prs', views.PullRequestViewSet)
 router.register(r'builds', views.BuildLogViewSet)
 router.register(r'changelog', views.ChangelogEntryViewSet)
 router.register(r'notifications', views.NotificationViewSet)
+router.register(r'teams', views.TeamViewSet)
+router.register(r'invitations', views.TeamInvitationViewSet)
 
 urlpatterns = [
     # Web Views
-    path('', views.dashboard_view, name='dashboard'),
+    path('', views.home_view, name='home'),
+    path('dashboard/', views.dashboard_view, name='dashboard'),
     path('register/', views.register_view, name='register'),
     path('login/', auth_views.LoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
@@ -36,6 +39,11 @@ urlpatterns = [
     path('invitations/', views.invitation_list_view, name='invitation_list'),
     path('invitations/<uuid:token>/accept/', views.invitation_accept_view, name='invitation_accept'),
     path('invitations/<uuid:token>/decline/', views.invitation_decline_view, name='invitation_decline'),
+    
+    # Token-based API endpoints for invitations
+    path('api/invitations/token/<uuid:token>/', views.invitation_by_token, name='invitation_by_token'),
+    path('api/invitations/token/<uuid:token>/accept/', views.invitation_accept_api, name='invitation_accept_api'),
+    path('api/invitations/token/<uuid:token>/decline/', views.invitation_decline_api, name='invitation_decline_api'),
     
     # API
     path('api/', include(router.urls)),
