@@ -48,6 +48,8 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: var(--shadow-md);
             padding: 1rem 0;
+            position: relative;
+            z-index: 1040;
         }
 
         .navbar-brand {
@@ -86,12 +88,79 @@
             border-radius: 0.75rem;
             padding: 0.5rem;
             margin-top: 0.5rem;
+            z-index: 9999 !important;
+            position: absolute !important;
+        }
+        
+        .dropdown-menu-end {
+            z-index: 9999 !important;
+        }
+        
+        .navbar-nav .dropdown-menu {
+            z-index: 9999 !important;
+        }
+        
+        .navbar .dropdown {
+            position: static;
+        }
+        
+        .navbar .dropdown-toggle::after {
+            z-index: 9999;
+        }
+        
+        /* Ensure dropdowns appear above everything */
+        .dropdown-menu.show {
+            z-index: 9999 !important;
+            position: absolute !important;
+        }
+        
+        /* Fix for notification dropdown specifically */
+        #notifications-dropdown {
+            z-index: 9999 !important;
+            position: absolute !important;
+            top: 100% !important;
+            right: 0 !important;
+        }
+        
+        /* Override any Bootstrap z-index issues */
+        .navbar-nav .nav-item .dropdown-menu {
+            z-index: 9999 !important;
+        }
+        
+        /* Ensure proper stacking context */
+        .navbar-nav .nav-item {
+            position: relative;
+        }
+        
+        /* Additional fixes for dropdown positioning */
+        body {
+            position: relative;
+        }
+        
+        /* Force dropdown menus to appear on top */
+        .dropdown-menu {
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+        }
+        
+        /* Specific fix for Bootstrap dropdown z-index */
+        .navbar .dropdown-menu {
+            position: absolute !important;
+            z-index: 9999 !important;
+            will-change: transform;
+        }
+        
+        /* Ensure no other elements interfere */
+        .card, .main-content, .container {
+            isolation: isolate;
         }
 
         .dropdown-item {
             border-radius: 0.5rem;
             padding: 0.5rem 1rem;
             transition: all 0.2s ease;
+            position: relative;
+            z-index: 9999;
         }
 
         .dropdown-item:hover {
@@ -274,6 +343,14 @@
         .main-content {
             min-height: calc(100vh - 80px);
             padding: 2rem 0;
+            z-index: 1;
+            position: relative;
+        }
+        
+        /* Ensure main content doesn't interfere with dropdowns */
+        .container {
+            position: relative;
+            z-index: 1;
         }
 
         /* Utility Classes */
@@ -423,7 +500,7 @@
                             </div>
                             <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
                         </a>
-                        <div class="dropdown-menu dropdown-menu-end">
+                        <div class="dropdown-menu dropdown-menu-end" style="z-index: 9999 !important;">
                             <div class="dropdown-header">
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-circle me-2">
@@ -512,10 +589,10 @@
             <div class="row">
                 <div class="col-md-6">
                     <h5 class="text-gradient">CodeFlow</h5>
-                    <p class="text-muted">AI-powered developer workflow automation platform</p>
+                    <p class="text">AI-powered developer workflow automation platform</p>
                 </div>
                 <div class="col-md-6 text-md-end">
-                    <p class="text-muted mb-0">&copy; 2024 CodeFlow. Built with ❤️ for developers.</p>
+                    <p class="text mb-0">&copy; 2024 CodeFlow. Built with ❤️ for developers.</p>
                 </div>
             </div>
         </div>
@@ -526,18 +603,47 @@
         // Load notifications
         function loadNotifications() {
             fetch('/api/notifications/')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    const count = data.results.filter(n => !n.read_at).length;
-                    document.getElementById('notification-count').textContent = count;
+                    const notifications = data.results || data;
+                    const count = notifications.filter(n => !n.read_at).length;
+                    const countElement = document.getElementById('notification-count');
+                    if (countElement) {
+                        countElement.textContent = count;
+                        countElement.style.display = count > 0 ? 'flex' : 'none';
+                    }
                     
                     const list = document.getElementById('notifications-list');
-                    if (count === 0) {
-                        list.innerHTML = '<p class="dropdown-item-text text-muted">No new notifications</p>';
-                    } else {
-                        list.innerHTML = data.results.slice(0, 5).map(n => 
-                            formatNotification(n)
-                        ).join('');
+                    if (list) {
+                        if (count === 0) {
+                            list.innerHTML = `
+                                <p class="dropdown-item-text text-muted text-center py-3">
+                                    <i class="fas fa-bell-slash fa-2x mb-2 d-block"></i>
+                                    No new notifications
+                                </p>
+                            `;
+                        } else {
+                            list.innerHTML = notifications.slice(0, 5).map(n => 
+                                formatNotification(n)
+                            ).join('');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading notifications:', error);
+                    const list = document.getElementById('notifications-list');
+                    if (list) {
+                        list.innerHTML = `
+                            <p class="dropdown-item-text text-muted text-center py-3">
+                                <i class="fas fa-exclamation-triangle fa-2x mb-2 d-block text-warning"></i>
+                                Failed to load notifications
+                            </p>
+                        `;
                     }
                 });
         }
@@ -742,6 +848,25 @@
                 }
             }, 5000);
         }
+
+        // Fix dropdown z-index issues
+        document.addEventListener('DOMContentLoaded', function() {
+            // Ensure all dropdown menus have proper z-index
+            const dropdownMenus = document.querySelectorAll('.dropdown-menu');
+            dropdownMenus.forEach(menu => {
+                menu.style.zIndex = '9999';
+                menu.style.position = 'absolute';
+            });
+            
+            // Fix dropdown positioning on show
+            document.addEventListener('show.bs.dropdown', function(event) {
+                const dropdown = event.target.nextElementSibling;
+                if (dropdown && dropdown.classList.contains('dropdown-menu')) {
+                    dropdown.style.zIndex = '9999';
+                    dropdown.style.position = 'absolute';
+                }
+            });
+        });
 
         {% if user.is_authenticated %}
         // Load notifications on page load

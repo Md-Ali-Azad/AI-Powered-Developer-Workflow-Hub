@@ -275,8 +275,14 @@ class InvitationService:
             invitation: TeamInvitation instance
         """
         try:
-            # Build invitation URL (this would need to be updated with actual URL pattern)
-            invitation_url = f"http://localhost:8000/invitations/{invitation.token}/accept/"
+            # Build invitation URL using Django's reverse function
+            from django.urls import reverse
+            from django.conf import settings
+            
+            # Get the base URL from settings or use localhost for development
+            base_url = getattr(settings, 'BASE_URL', 'http://localhost:8000')
+            invitation_path = reverse('invitation_accept', kwargs={'token': invitation.token})
+            invitation_url = f"{base_url}{invitation_path}"
             
             subject = f"You're invited to join {invitation.team.name}"
             message = f"""

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -31,7 +32,18 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Email Configuration
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@codeflow.com')
+
+# Fallback to console backend if no email credentials are provided
+if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 
 # Application definition
@@ -141,12 +153,11 @@ LOGOUT_REDIRECT_URL = '/login/'
 
 # Gemini API Configuration
 import os
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyDR7k6zPLwPki5jnpCcG6py-Vsz5NdVnng')
-
-# Ensure the API key is available
-if not GEMINI_API_KEY:
-    GEMINI_API_KEY = 'AIzaSyDR7k6zPLwPki5jnpCcG6py-Vsz5NdVnng'
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 # GitHub API Configuration
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 GITHUB_WEBHOOK_SECRET = os.getenv('GITHUB_WEBHOOK_SECRET')
+
+# Base URL for email links
+BASE_URL = os.getenv('BASE_URL', 'http://localhost:8000')

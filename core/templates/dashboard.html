@@ -283,12 +283,16 @@
                             </div>
                         </div>
                         <div class="text-end">
-                            <div class="d-flex flex-column align-items-end">
+                            <div class="d-flex flex-column gap-1">
                                 {% if team_data.can_manage_projects %}
-                                    <small class="text-success"><i class="fas fa-cog me-1"></i>Manage</small>
+                                    <a href="{% url 'team_detail' team_data.team.id %}" class="btn btn-sm btn-outline-success" title="Manage Team">
+                                        <i class="fas fa-cog me-1"></i>Manage
+                                    </a>
                                 {% endif %}
                                 {% if team_data.can_invite %}
-                                    <small class="text-info"><i class="fas fa-user-plus me-1"></i>Invite</small>
+                                    <a href="{% url 'team_invite' team_data.team.id %}" class="btn btn-sm btn-outline-info" title="Invite Members">
+                                        <i class="fas fa-user-plus me-1"></i>Invite
+                                    </a>
                                 {% endif %}
                             </div>
                         </div>
