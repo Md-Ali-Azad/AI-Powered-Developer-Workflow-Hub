@@ -144,8 +144,6 @@ dmypy.json
 ehthumbs.db
 Thumbs.db
 
-# Kiro specific files
-.kiro/
 
 # Project specific files
 FIXES_SUMMARY.md
