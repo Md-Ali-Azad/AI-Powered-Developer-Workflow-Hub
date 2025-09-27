@@ -379,15 +379,249 @@
 </div>
 
 <style>
-.hover-lift {
+/* Dashboard Animations */
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInFromLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInFromRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes countUp {
+    from {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200px 0;
+    }
+    100% {
+        background-position: calc(200px + 100%) 0;
+    }
+}
+
+@keyframes bounce {
+    0%, 20%, 53%, 80%, 100% {
+        transform: translate3d(0, 0, 0);
+    }
+    40%, 43% {
+        transform: translate3d(0, -10px, 0);
+    }
+    70% {
+        transform: translate3d(0, -5px, 0);
+    }
+    90% {
+        transform: translate3d(0, -2px, 0);
+    }
+}
+
+/* Welcome Header Animation */
+.card[style*="gradient-primary"] {
+    animation: slideInFromTop 0.8s ease-out;
+    background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c);
+    background-size: 400% 400%;
+    animation: slideInFromTop 0.8s ease-out, gradientShift 8s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* Stats Cards Animation */
+.col-lg-3:nth-child(1) .card { animation: fadeInUp 0.6s ease-out 0.1s both; }
+.col-lg-3:nth-child(2) .card { animation: fadeInUp 0.6s ease-out 0.2s both; }
+.col-lg-3:nth-child(3) .card { animation: fadeInUp 0.6s ease-out 0.3s both; }
+.col-lg-3:nth-child(4) .card { animation: fadeInUp 0.6s ease-out 0.4s both; }
+
+/* Stats Numbers Animation */
+.card-body h3 {
+    animation: countUp 1s ease-out 0.5s both;
     transition: all 0.3s ease;
 }
 
-.hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md) !important;
+.card-body h3:hover {
+    animation: pulse 0.6s ease-in-out;
+    color: var(--primary-color) !important;
 }
 
+/* Icon Containers */
+.bg-primary.bg-opacity-10,
+.bg-success.bg-opacity-10,
+.bg-warning.bg-opacity-10,
+.bg-info.bg-opacity-10 {
+    transition: all 0.3s ease;
+    animation: scaleIn 0.8s ease-out 0.3s both;
+}
+
+.card:hover .bg-primary.bg-opacity-10 { transform: scale(1.1) rotate(5deg); }
+.card:hover .bg-success.bg-opacity-10 { transform: scale(1.1) rotate(-5deg); }
+.card:hover .bg-warning.bg-opacity-10 { transform: scale(1.1) rotate(5deg); }
+.card:hover .bg-info.bg-opacity-10 { transform: scale(1.1) rotate(-5deg); }
+
+/* Project Cards */
+.hover-lift {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: slideInFromLeft 0.6s ease-out;
+}
+
+.hover-lift:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Stagger project cards */
+.col-md-6:nth-child(odd) .hover-lift { animation-delay: 0.1s; }
+.col-md-6:nth-child(even) .hover-lift { animation-delay: 0.2s; }
+
+/* Team Cards Animation */
+.bg-light.rounded-3 {
+    transition: all 0.3s ease;
+    animation: slideInFromRight 0.6s ease-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.bg-light.rounded-3::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.6s;
+}
+
+.bg-light.rounded-3:hover::before {
+    left: 100%;
+}
+
+.bg-light.rounded-3:hover {
+    transform: translateX(5px);
+    background-color: #f8f9ff !important;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* AI Assistant Animation */
+.card:has(#ai-input) {
+    animation: scaleIn 0.8s ease-out 0.5s both;
+}
+
+#ai-input {
+    transition: all 0.3s ease;
+}
+
+#ai-input:focus {
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+}
+
+#ai-ask {
+    transition: all 0.3s ease;
+}
+
+#ai-ask:hover {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Quick AI Suggestions */
+.btn-outline-secondary {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-outline-secondary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(108, 117, 125, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.btn-outline-secondary:hover::before {
+    left: 100%;
+}
+
+.btn-outline-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Timeline Animation */
 .timeline {
     position: relative;
 }
@@ -399,23 +633,185 @@
     top: 0;
     bottom: 0;
     width: 2px;
-    background: var(--border-color);
+    background: linear-gradient(to bottom, var(--primary-color), var(--border-color));
+    animation: slideInFromTop 1s ease-out 0.8s both;
+}
+
+.timeline .d-flex {
+    animation: slideInFromLeft 0.6s ease-out;
+    transition: all 0.3s ease;
+}
+
+.timeline .d-flex:nth-child(1) { animation-delay: 0.9s; }
+.timeline .d-flex:nth-child(2) { animation-delay: 1.0s; }
+.timeline .d-flex:nth-child(3) { animation-delay: 1.1s; }
+
+.timeline .d-flex:hover {
+    transform: translateX(10px);
+    background-color: rgba(99, 102, 241, 0.05);
+    border-radius: 8px;
+    padding: 8px;
 }
 
 .timeline .d-flex:last-child::before {
     display: none;
 }
 
+/* Activity Icons */
+.timeline .bg-primary.bg-opacity-10 {
+    transition: all 0.3s ease;
+}
+
+.timeline .d-flex:hover .bg-primary.bg-opacity-10 {
+    transform: scale(1.2) rotate(10deg);
+    background-color: var(--primary-color) !important;
+}
+
+.timeline .d-flex:hover .bg-primary.bg-opacity-10 i {
+    color: white !important;
+}
+
+/* Pull Request Items */
+.list-group-item {
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.6s ease-out;
+    border-left: 3px solid transparent !important;
+}
+
+.list-group-item:nth-child(1) { animation-delay: 0.1s; }
+.list-group-item:nth-child(2) { animation-delay: 0.2s; }
+.list-group-item:nth-child(3) { animation-delay: 0.3s; }
+
+.list-group-item:hover {
+    transform: translateX(5px);
+    border-left-color: var(--primary-color) !important;
+    background-color: rgba(99, 102, 241, 0.05);
+}
+
+/* Risk Flags Animation */
+.risk-flag {
+    animation: bounce 1s ease-out;
+    transition: all 0.3s ease;
+}
+
+.risk-flag:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Badge Animations */
+.badge {
+    transition: all 0.3s ease;
+    animation: scaleIn 0.5s ease-out;
+}
+
+.badge:hover {
+    transform: scale(1.1);
+}
+
+/* Loading States */
+.loading-state {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200px 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+/* Empty States */
+.text-center.py-4,
+.text-center.py-5 {
+    animation: fadeInUp 0.8s ease-out;
+}
+
+.text-center.py-4 i,
+.text-center.py-5 i {
+    animation: bounce 2s ease-in-out infinite;
+}
+
+/* Button Hover Effects */
+.btn {
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Dropdown Animations */
+.dropdown-menu {
+    animation: fadeInUp 0.3s ease-out;
+    transform-origin: top;
+}
+
+.dropdown-item {
+    transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+    transform: translateX(5px);
+}
+
+/* Responsive Animations */
 @media (max-width: 768px) {
     .timeline::before {
         display: none;
     }
+    
+    /* Reduce animation intensity on mobile */
+    .hover-lift:hover {
+        transform: translateY(-4px) scale(1.01);
+    }
+    
+    .btn:hover {
+        transform: translateY(-1px) scale(1.02);
+    }
+    
+    .timeline .d-flex:hover {
+        transform: translateX(5px);
+    }
+}
+
+/* Accessibility - Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Focus states for accessibility */
+.card:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.btn:focus {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
 }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// AI Assistant Functions
 function askAI(question) {
     const input = document.getElementById('ai-input');
     const response = document.getElementById('ai-response');
@@ -424,8 +820,9 @@ function askAI(question) {
     
     if (!input.value.trim()) return;
     
+    // Add loading animation
     response.innerHTML = `
-        <div class="d-flex align-items-center p-3 bg-light rounded-3">
+        <div class="d-flex align-items-center p-3 bg-light rounded-3 loading-state">
             <div class="loading-spinner me-2"></div>
             <span class="text-muted small">AI is thinking...</span>
         </div>
@@ -451,7 +848,7 @@ function askAI(question) {
             .replace(/\n/g, '<br>');
         
         response.innerHTML = `
-            <div class="alert alert-primary border-0 mb-0">
+            <div class="alert alert-primary border-0 mb-0" style="animation: fadeInUp 0.5s ease-out;">
                 <div class="d-flex align-items-start">
                     <i class="fas fa-robot me-2 mt-1"></i>
                     <div class="small">${formattedText}</div>
@@ -462,7 +859,7 @@ function askAI(question) {
     })
     .catch(error => {
         response.innerHTML = `
-            <div class="alert alert-danger border-0 mb-0">
+            <div class="alert alert-danger border-0 mb-0" style="animation: fadeInUp 0.5s ease-out;">
                 <div class="d-flex align-items-center">
                     <i class="fas fa-exclamation-circle me-2"></i>
                     <span class="small">Unable to connect to AI assistant. Please try again.</span>
@@ -472,9 +869,186 @@ function askAI(question) {
     });
 }
 
-document.getElementById('ai-ask').addEventListener('click', () => askAI());
+// Enhanced Dashboard Animations
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate stats numbers on load
+    animateStatsNumbers();
+    
+    // Add intersection observer for scroll animations
+    setupScrollAnimations();
+    
+    // Add hover effects to cards
+    setupCardHoverEffects();
+    
+    // Setup AI assistant animations
+    setupAIAssistantAnimations();
+    
+    // Add stagger animations to lists
+    setupStaggerAnimations();
+    
+    // Setup parallax effects
+    setupParallaxEffects();
+});
 
-document.getElementById('ai-input').addEventListener('keypress', function(e) {
+// Animate statistics numbers
+function animateStatsNumbers() {
+    const statNumbers = document.querySelectorAll('.card-body h3');
+    
+    statNumbers.forEach((stat, index) => {
+        const finalValue = parseInt(stat.textContent) || 0;
+        let currentValue = 0;
+        const increment = finalValue / 30; // 30 frames for smooth animation
+        
+        setTimeout(() => {
+            const timer = setInterval(() => {
+                currentValue += increment;
+                if (currentValue >= finalValue) {
+                    stat.textContent = finalValue;
+                    clearInterval(timer);
+                } else {
+                    stat.textContent = Math.floor(currentValue);
+                }
+            }, 50);
+        }, index * 200); // Stagger the animations
+    });
+}
+
+// Setup scroll-triggered animations
+function setupScrollAnimations() {
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.animation = 'fadeInUp 0.8s ease-out forwards';
+            }
+        });
+    }, observerOptions);
+
+    // Observe cards that are initially below the fold
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        if (index > 4) { // Only animate cards below the fold
+            observer.observe(card);
+        }
+    });
+}
+
+// Enhanced card hover effects
+function setupCardHoverEffects() {
+    const cards = document.querySelectorAll('.card');
+    
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-8px) scale(1.02)';
+            this.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.15)';
+            
+            // Animate icons inside the card
+            const icons = this.querySelectorAll('i');
+            icons.forEach(icon => {
+                icon.style.transform = 'scale(1.1) rotate(5deg)';
+            });
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+            this.style.boxShadow = '';
+            
+            const icons = this.querySelectorAll('i');
+            icons.forEach(icon => {
+                icon.style.transform = '';
+            });
+        });
+    });
+}
+
+// AI Assistant enhanced animations
+function setupAIAssistantAnimations() {
+    const aiInput = document.getElementById('ai-input');
+    const aiButton = document.getElementById('ai-ask');
+    const quickSuggestions = document.querySelectorAll('.btn-outline-secondary');
+    
+    if (aiInput) {
+        aiInput.addEventListener('focus', function() {
+            this.parentElement.style.transform = 'scale(1.02)';
+            this.parentElement.style.boxShadow = '0 0 20px rgba(99, 102, 241, 0.3)';
+        });
+        
+        aiInput.addEventListener('blur', function() {
+            this.parentElement.style.transform = '';
+            this.parentElement.style.boxShadow = '';
+        });
+        
+        // Typing animation
+        aiInput.addEventListener('input', function() {
+            if (aiButton) {
+                aiButton.style.animation = 'pulse 0.5s ease-in-out';
+                setTimeout(() => {
+                    aiButton.style.animation = '';
+                }, 500);
+            }
+        });
+    }
+    
+    // Quick suggestion animations
+    quickSuggestions.forEach((btn, index) => {
+        btn.style.animationDelay = `${index * 0.1}s`;
+        
+        btn.addEventListener('click', function() {
+            this.style.animation = 'bounce 0.6s ease-out';
+            setTimeout(() => {
+                this.style.animation = '';
+            }, 600);
+        });
+    });
+}
+
+// Stagger animations for lists
+function setupStaggerAnimations() {
+    const listItems = document.querySelectorAll('.list-group-item, .timeline .d-flex');
+    
+    listItems.forEach((item, index) => {
+        item.style.animationDelay = `${index * 0.1}s`;
+        
+        item.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateX(10px)';
+            this.style.backgroundColor = 'rgba(99, 102, 241, 0.05)';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+            this.style.backgroundColor = '';
+        });
+    });
+}
+
+// Parallax effects for enhanced visual appeal
+function setupParallaxEffects() {
+    window.addEventListener('scroll', function() {
+        const scrolled = window.pageYOffset;
+        const welcomeCard = document.querySelector('.card[style*="gradient-primary"]');
+        
+        if (welcomeCard) {
+            const speed = scrolled * 0.1;
+            welcomeCard.style.transform = `translateY(${speed}px)`;
+        }
+        
+        // Parallax for stats cards
+        const statsCards = document.querySelectorAll('.col-lg-3 .card');
+        statsCards.forEach((card, index) => {
+            const speed = scrolled * (0.05 + index * 0.01);
+            card.style.transform = `translateY(${speed}px)`;
+        });
+    });
+}
+
+// AI Assistant Event Listeners
+document.getElementById('ai-ask')?.addEventListener('click', () => askAI());
+
+document.getElementById('ai-input')?.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         askAI();
     }
@@ -483,7 +1057,61 @@ document.getElementById('ai-input').addEventListener('keypress', function(e) {
 // Auto-focus AI input when clicking quick suggestions
 document.querySelectorAll('[onclick^="askAI"]').forEach(btn => {
     btn.addEventListener('click', () => {
-        setTimeout(() => document.getElementById('ai-input').focus(), 100);
+        setTimeout(() => {
+            const aiInput = document.getElementById('ai-input');
+            if (aiInput) {
+                aiInput.focus();
+                aiInput.style.animation = 'pulse 0.5s ease-in-out';
+            }
+        }, 100);
+    });
+});
+
+// Enhanced button interactions
+document.querySelectorAll('.btn').forEach(btn => {
+    btn.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-2px) scale(1.05)';
+    });
+    
+    btn.addEventListener('mouseleave', function() {
+        this.style.transform = '';
+    });
+    
+    btn.addEventListener('click', function() {
+        this.style.animation = 'pulse 0.3s ease-out';
+        setTimeout(() => {
+            this.style.animation = '';
+        }, 300);
+    });
+});
+
+// Loading state simulation for dynamic content
+function simulateLoading(element) {
+    element.classList.add('loading-state');
+    setTimeout(() => {
+        element.classList.remove('loading-state');
+        element.style.animation = 'fadeInUp 0.5s ease-out';
+    }, 1000);
+}
+
+// Add loading animation to new content
+function addContentWithAnimation(container, content) {
+    container.style.opacity = '0';
+    container.innerHTML = content;
+    container.style.animation = 'fadeInUp 0.5s ease-out forwards';
+}
+
+// Smooth scroll for internal links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
     });
 });
 </script>
